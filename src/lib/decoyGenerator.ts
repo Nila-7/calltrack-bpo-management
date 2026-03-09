@@ -17,9 +17,7 @@ const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
   PERSON_NAME: (original) => DECOY_TEMPLATES[original] || 'Rohit Srivastava',
   
   DATE_OF_BIRTH: (original) => {
-    // Specific replacement for the user example
     if (original.includes('14 August 1993')) return '18 July 1992';
-    // Generic shift for others
     return original.replace('199', '198').replace('200', '199');
   },
   
@@ -29,7 +27,12 @@ const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
     const randomLetters = (len: number) => Array.from({length: len}, () => letters[Math.floor(Math.random() * letters.length)]).join('');
     const randomDigits = (len: number) => Array.from({length: len}, () => Math.floor(Math.random() * 10)).join('');
     
-    return `${randomLetters(5)}${randomDigits(4)}${randomLetters(1)}`;
+    let decoy = `${randomLetters(5)}${randomDigits(4)}${randomLetters(1)}`;
+    // Ensure it's different from original
+    while (decoy === original) {
+      decoy = `${randomLetters(5)}${randomDigits(4)}${randomLetters(1)}`;
+    }
+    return decoy;
   },
   
   AADHAAR_NUMBER: (original) => {
@@ -68,14 +71,13 @@ export function generateDecoyDocument(text: string, entities: DetectedEntity[]):
     if (entity) {
       const decoy = generateDecoyValue(entity);
       
-      // Preserve document structure by splitting at the first colon
       const colonIndex = line.indexOf(':');
       if (colonIndex !== -1) {
-        // keyPart includes the label and the colon
+        // Label remains unchanged
         const keyPart = line.substring(0, colonIndex + 1);
         const originalValuePart = line.substring(colonIndex + 1);
         
-        // Preserve original leading/trailing whitespace around the value
+        // Preserve spacing
         const match = originalValuePart.match(/^(\s*)(.*?)(\s*)$/);
         const leadingSpace = match?.[1] || ' ';
         const trailingSpace = match?.[3] || '';
