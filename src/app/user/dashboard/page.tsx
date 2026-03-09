@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -16,9 +17,9 @@ import {
   MoreVertical,
   Plus,
   Loader2,
-  User
+  User as UserIcon
 } from "lucide-react"
-import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
+import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from "@/firebase"
 import { signOut } from "firebase/auth"
 import { collection, addDoc, serverTimestamp, doc, deleteDoc } from "firebase/firestore"
 import { logActivity } from "@/services/activityLogger"
@@ -36,6 +37,12 @@ export default function UserDashboard() {
   const [uploading, setUploading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
 
+  const profileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+  const { data: profile } = useDoc(profileRef);
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/')
@@ -50,10 +57,11 @@ export default function UserDashboard() {
   const { data: docs, isLoading: docsLoading } = useCollection(docsQuery)
 
   const handleLogout = async () => {
-    if (user) {
+    if (user && profile) {
       await logActivity(db, {
         userId: user.uid,
-        userEmail: user.email || 'N/A',
+        username: profile.username || 'N/A',
+        email: user.email || 'N/A',
         role: 'user',
         action: 'User Logout',
         status: 'Success'
@@ -64,12 +72,13 @@ export default function UserDashboard() {
   }
 
   const handleDelete = async (docId: string, fileName: string) => {
-    if (!user) return
+    if (!user || !profile) return
     try {
       await deleteDoc(doc(db, 'users', user.uid, 'documents', docId))
       await logActivity(db, {
         userId: user.uid,
-        userEmail: user.email || 'N/A',
+        username: profile.username || 'N/A',
+        email: user.email || 'N/A',
         role: 'user',
         action: 'Document Deleted',
         documentName: fileName,
@@ -86,7 +95,7 @@ export default function UserDashboard() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !user) return
+    if (!file || !user || !profile) return
 
     setUploading(true)
     try {
@@ -116,7 +125,8 @@ export default function UserDashboard() {
 
       await logActivity(db, {
         userId: user.uid,
-        userEmail: user.email || 'N/A',
+        username: profile.username || 'N/A',
+        email: user.email || 'N/A',
         role: 'user',
         action: 'Document Uploaded',
         documentId: docRef.id,
@@ -170,7 +180,7 @@ export default function UserDashboard() {
           </div>
           <div className="flex items-center space-x-2 mr-4">
             <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none">
-              <User className="w-3 h-3 mr-1" /> {user?.email}
+              <UserIcon className="w-3 h-3 mr-1" /> {profile?.username || 'Loading...'}
             </Badge>
           </div>
           <Button variant="ghost" onClick={handleLogout}>
@@ -234,15 +244,18 @@ export default function UserDashboard() {
                     variant="default" 
                     className="w-full bg-secondary hover:bg-secondary/90"
                     onClick={() => {
-                      logActivity(db, {
-                        userId: user?.uid || '',
-                        userEmail: user?.email || 'N/A',
-                        role: 'user',
-                        action: 'Document Opened',
-                        documentId: doc.id,
-                        documentName: doc.fileName,
-                        status: 'Success'
-                      })
+                      if (user && profile) {
+                        logActivity(db, {
+                          userId: user.uid,
+                          username: profile.username || 'N/A',
+                          email: user.email || 'N/A',
+                          role: 'user',
+                          action: 'Document Opened',
+                          documentId: doc.id,
+                          documentName: doc.fileName,
+                          status: 'Success'
+                        })
+                      }
                       router.push(`/viewer/${doc.id}`)
                     }}
                   >

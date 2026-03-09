@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -6,12 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, User, ShieldCheck, Lock, Loader2, KeyRound } from "lucide-react"
+import { Shield, User as UserIcon, ShieldCheck, Lock, Loader2, KeyRound } from "lucide-react"
 import { useAuth, useFirestore } from "@/firebase"
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"
 import { logActivity, trackSession } from "@/services/activityLogger"
 import { useToast } from "@/hooks/use-toast"
-import { doc, setDoc } from "firebase/firestore"
+import { doc, setDoc, getDocs, collection, query, where } from "firebase/firestore"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,49 +23,92 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [loginType, setLoginType] = useState<'user' | 'admin'>('user')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     try {
-      let userCredential;
       if (isSignUp) {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password)
-        // Set user profile with role
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
+        if (password !== confirmPassword) {
+          throw new Error("Passwords do not match")
+        }
+
+        // Check if username unique
+        const usernameQuery = query(collection(db, "users"), where("username", "==", username));
+        const usernameSnap = await getDocs(usernameQuery);
+        if (!usernameSnap.empty) {
+          throw new Error("Username already taken");
+        }
+
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+        const newUser = {
+          username,
           email,
           role: loginType === 'admin' ? 'Admin' : 'User',
           createdAt: new Date().toISOString()
+        };
+        
+        await setDoc(doc(db, 'users', userCredential.user.uid), newUser)
+
+        await trackSession(db, {
+          userId: userCredential.user.uid,
+          username: username,
+          email: email,
+          role: loginType,
+          isActive: true
         })
+
+        await logActivity(db, {
+          userId: userCredential.user.uid,
+          username: username,
+          email: email,
+          role: loginType,
+          action: loginType === 'admin' ? 'Admin Login' : 'User Login',
+          status: 'Success'
+        })
+
+        router.push(loginType === 'admin' ? '/admin/dashboard' : '/user/dashboard')
+
       } else {
-        userCredential = await signInWithEmailAndPassword(auth, email, password)
+        // Login by username
+        const userQuery = query(collection(db, "users"), where("username", "==", username));
+        const userSnap = await getDocs(userQuery);
+        if (userSnap.empty) {
+          throw new Error("User not found");
+        }
+        
+        const userData = userSnap.docs[0].data();
+        const userCredential = await signInWithEmailAndPassword(auth, userData.email, password);
+
+        await trackSession(db, {
+          userId: userCredential.user.uid,
+          username: userData.username,
+          email: userData.email,
+          role: userData.role.toLowerCase() as 'admin' | 'user',
+          isActive: true
+        })
+
+        await logActivity(db, {
+          userId: userCredential.user.uid,
+          username: userData.username,
+          email: userData.email,
+          role: userData.role.toLowerCase() as 'admin' | 'user',
+          action: userData.role === 'Admin' ? 'Admin Login' : 'User Login',
+          status: 'Success'
+        })
+
+        router.push(userData.role === 'Admin' ? '/admin/dashboard' : '/user/dashboard')
       }
-
-      // Track active session
-      await trackSession(db, {
-        userId: userCredential.user.uid,
-        email: email,
-        role: loginType,
-        isActive: true
-      })
-
-      // Log authentication event
-      await logActivity(db, {
-        userId: userCredential.user.uid,
-        userEmail: email,
-        role: loginType,
-        action: loginType === 'admin' ? 'Admin Login' : 'User Login',
-        status: 'Success'
-      })
 
       toast({
         title: isSignUp ? "Account Created" : "Authentication Successful",
-        description: `Welcome to IntelliSecureX, ${email}.`,
+        description: `Welcome to IntelliSecureX, ${username}.`,
       })
       
-      router.push(loginType === 'admin' ? '/admin/dashboard' : '/user/dashboard')
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -97,37 +141,52 @@ export default function LoginPage() {
         </CardHeader>
         
         <CardContent className="pt-4">
-          <div className="grid grid-cols-2 gap-2 mb-6 p-1 bg-slate-100 rounded-lg">
-            <Button 
-              variant={loginType === 'user' ? 'default' : 'ghost'} 
-              size="sm"
-              onClick={() => setLoginType('user')}
-              className="text-xs"
-            >
-              <User className="w-3 h-3 mr-1" /> User Portal
-            </Button>
-            <Button 
-              variant={loginType === 'admin' ? 'default' : 'ghost'} 
-              size="sm"
-              onClick={() => setLoginType('admin')}
-              className="text-xs"
-            >
-              <ShieldCheck className="w-3 h-3 mr-1" /> Admin Console
-            </Button>
-          </div>
+          {!isSignUp && (
+            <div className="grid grid-cols-2 gap-2 mb-6 p-1 bg-slate-100 rounded-lg">
+              <Button 
+                variant={loginType === 'user' ? 'default' : 'ghost'} 
+                size="sm"
+                onClick={() => setLoginType('user')}
+                className="text-xs"
+              >
+                <UserIcon className="w-3 h-3 mr-1" /> User Portal
+              </Button>
+              <Button 
+                variant={loginType === 'admin' ? 'default' : 'ghost'} 
+                size="sm"
+                onClick={() => setLoginType('admin')}
+                className="text-xs"
+              >
+                <ShieldCheck className="w-3 h-3 mr-1" /> Admin Console
+              </Button>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="username">Username</Label>
               <Input 
-                id="email" 
-                type="email" 
-                placeholder="name@example.com" 
+                id="username" 
+                type="text" 
+                placeholder="nila" 
                 required 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="name@example.com" 
+                  required 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input 
@@ -138,6 +197,18 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Input 
+                  id="confirm-password" 
+                  type="password" 
+                  required 
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+            )}
             <Button className="w-full h-12 text-lg font-medium" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <KeyRound className="w-5 h-5 mr-2" />}
               {isSignUp ? "Create Account" : "Sign In"}

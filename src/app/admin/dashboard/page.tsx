@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -19,7 +20,8 @@ import {
   UserPlus,
   Loader2,
   Search,
-  Monitor
+  Monitor,
+  User as UserIcon
 } from "lucide-react"
 import { 
   Dialog, 
@@ -30,9 +32,9 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog"
-import { useAuth, useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase"
+import { useAuth, useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from "@/firebase"
 import { signOut, createUserWithEmailAndPassword } from "firebase/auth"
-import { collection, query, orderBy, limit, doc, setDoc } from "firebase/firestore"
+import { collection, query, orderBy, limit, doc, setDoc, getDocs, where } from "firebase/firestore"
 import { logActivity } from "@/services/activityLogger"
 import { useToast } from "@/hooks/use-toast"
 
@@ -43,10 +45,17 @@ export default function AdminDashboard() {
   const { user, isUserLoading } = useUser()
   const { toast } = useToast()
 
+  const [newUsername, setNewUsername] = useState("")
   const [newUserEmail, setNewUserEmail] = useState("")
   const [newUserPassword, setNewUserPassword] = useState("")
   const [creatingUser, setCreatingUser] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+
+  const profileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+  const { data: profile } = useDoc(profileRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -54,7 +63,7 @@ export default function AdminDashboard() {
     }
   }, [user, isUserLoading, router])
 
-  // Memoize logs query - real-time updates every time a new log appears
+  // Memoize logs query
   const logsQuery = useMemoFirebase(() => 
     query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(50))
   , [db])
@@ -63,10 +72,6 @@ export default function AdminDashboard() {
   // Memoize users collection
   const usersCollection = useMemoFirebase(() => collection(db, 'users'), [db])
   const { data: users } = useCollection(usersCollection)
-
-  // Active sessions collection
-  const sessionsCollection = useMemoFirebase(() => collection(db, 'sessions'), [db])
-  const { data: sessions } = useCollection(sessionsCollection)
 
   const stats = useMemo(() => {
     if (!logs || !users) return []
@@ -95,10 +100,11 @@ export default function AdminDashboard() {
   }
 
   const handleLogout = async () => {
-    if (user) {
+    if (user && profile) {
       await logActivity(db, {
         userId: user.uid,
-        userEmail: user.email || 'N/A',
+        username: profile.username || 'Admin',
+        email: user.email || 'N/A',
         role: 'admin',
         action: 'User Logout',
         status: 'Success'
@@ -112,9 +118,17 @@ export default function AdminDashboard() {
     e.preventDefault()
     setCreatingUser(true)
     try {
+      // Check username unique
+      const usernameQuery = query(collection(db, "users"), where("username", "==", newUsername));
+      const usernameSnap = await getDocs(usernameQuery);
+      if (!usernameSnap.empty) {
+        throw new Error("Username already taken");
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail, newUserPassword)
       
       await setDoc(doc(db, 'users', userCredential.user.uid), {
+        username: newUsername,
         email: newUserEmail,
         role: 'User',
         createdAt: new Date().toISOString()
@@ -122,18 +136,20 @@ export default function AdminDashboard() {
 
       await logActivity(db, {
         userId: user?.uid || 'System',
-        userEmail: user?.email || 'Admin',
+        username: profile?.username || 'Admin',
+        email: user?.email || 'Admin',
         role: 'admin',
         action: 'User Created',
         status: 'Success',
-        metadata: { targetEmail: newUserEmail }
+        metadata: { targetUsername: newUsername, targetEmail: newUserEmail }
       })
 
       toast({
         title: "User Provisioned",
-        description: `Account for ${newUserEmail} has been added to the system.`,
+        description: `Account for ${newUsername} has been added to the system.`,
       })
       
+      setNewUsername("")
       setNewUserEmail("")
       setNewUserPassword("")
       setIsDialogOpen(false)
@@ -160,7 +176,7 @@ export default function AdminDashboard() {
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2 mr-4">
             <Badge variant="outline" className="text-white border-white/20">
-              <Monitor className="w-3 h-3 mr-1" /> ADMIN: {user?.email}
+              <Monitor className="w-3 h-3 mr-1" /> ADMIN: {profile?.username || 'Loading...'}
             </Badge>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -178,6 +194,17 @@ export default function AdminDashboard() {
               </DialogHeader>
               <form onSubmit={handleCreateUser} className="space-y-4 py-4">
                 <div className="space-y-2">
+                  <Label htmlFor="user-name">Username</Label>
+                  <Input 
+                    id="user-name" 
+                    type="text" 
+                    placeholder="nila" 
+                    required 
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="user-email">Email Address</Label>
                   <Input 
                     id="user-email" 
@@ -189,7 +216,7 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="user-password">Initial Password</Label>
+                  <Label htmlFor="user-password">Temporary Password</Label>
                   <Input 
                     id="user-password" 
                     type="password" 
@@ -261,7 +288,7 @@ export default function AdminDashboard() {
                 {logs?.map((log) => (
                   <TableRow key={log.id} className="hover:bg-slate-50/50 transition-colors">
                     <TableCell className="max-w-[200px]">
-                      <div className="font-bold text-slate-700 truncate">{log.userEmail || 'System'}</div>
+                      <div className="font-bold text-slate-700 truncate">{log.username || 'System'}</div>
                       <div className="font-mono text-[9px] text-slate-400 truncate uppercase tracking-tighter">{log.role || 'sys'} | {log.userId}</div>
                     </TableCell>
                     <TableCell className="font-bold text-slate-800 text-sm">{log.action}</TableCell>

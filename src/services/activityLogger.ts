@@ -1,3 +1,4 @@
+
 'use client';
 
 import { collection, addDoc, serverTimestamp, Firestore } from 'firebase/firestore';
@@ -21,7 +22,8 @@ export type SystemAction =
 
 export interface ActivityLog {
   userId: string;
-  userEmail: string;
+  username: string;
+  email: string;
   role: 'admin' | 'user';
   action: SystemAction;
   documentId?: string;
@@ -64,6 +66,7 @@ export async function trackSession(
   db: Firestore,
   session: {
     userId: string;
+    username: string;
     email: string;
     role: 'admin' | 'user';
     isActive: boolean;

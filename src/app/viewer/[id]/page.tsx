@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -37,6 +38,12 @@ export default function DocumentViewer() {
   const [showClassification, setShowClassification] = useState(false)
   const [suspiciousMode, setSuspiciousMode] = useState(false)
 
+  const profileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user]);
+  const { data: profile } = useDoc(profileRef);
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/')
@@ -64,11 +71,12 @@ export default function DocumentViewer() {
 
   const handleToggleDecoy = (mode: 'original' | 'decoy') => {
     setViewMode(mode)
-    if (mode === 'decoy') {
+    if (mode === 'decoy' && user && profile) {
       logActivity(db, {
-        userId: user?.uid || '',
-        userEmail: user?.email || 'N/A',
-        role: 'user',
+        userId: user.uid,
+        username: profile.username || 'N/A',
+        email: user.email || 'N/A',
+        role: profile.role.toLowerCase() as 'admin' | 'user',
         action: 'Decoy Activated',
         documentId: id,
         documentName: document?.fileName,
@@ -78,12 +86,14 @@ export default function DocumentViewer() {
   }
 
   const simulateBreach = async () => {
+    if (!user || !profile) return
     setSuspiciousMode(true)
     setViewMode('decoy')
     await logActivity(db, {
-      userId: user?.uid || '',
-      userEmail: user?.email || 'N/A',
-      role: 'user',
+      userId: user.uid,
+      username: profile.username || 'N/A',
+      email: user.email || 'N/A',
+      role: profile.role.toLowerCase() as 'admin' | 'user',
       action: 'Simulated Breach Triggered',
       documentId: id,
       documentName: document?.fileName,
