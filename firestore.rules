@@ -7,6 +7,7 @@ service cloud.firestore {
      * 1. Path-based isolation for user document workspaces.
      * 2. Identity-mapped global audit trails (activity_logs).
      * 3. Role-based administrative override.
+     * 4. Support for public username lookups for registration/login mapping.
      */
 
     function isSignedIn() {
@@ -21,20 +22,22 @@ service cloud.firestore {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    function isValidOwnershipField(userId) {
-      return request.resource.data.userId == userId;
-    }
-
     match /users/{userId} {
-      allow get, update: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
-      allow create: if isSignedIn(); // Allow initial self-registration or admin provision
+      // Allow get for any signed in user to load their own or others' basic profiles
+      allow get: if isSignedIn();
+      // Allow anyone to check for a username (limit 1) to support "Login by Username" and "Unique Username" checks.
+      allow list: if isAdmin() || (request.query.limit == 1);
+      // Allow self-registration: user must be signed in (via Firebase Auth) and creating their own document.
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      // Owners and Admins can update profiles.
+      allow update: if isOwner(userId) || isAdmin();
+      // Only Admins can delete users.
       allow delete: if isAdmin();
     }
 
     match /users/{userId}/documents/{documentId} {
       allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isValidOwnershipField(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
       allow update: if isOwner(userId) && request.resource.data.userId == resource.data.userId;
       allow delete: if isOwner(userId) || isAdmin();
 

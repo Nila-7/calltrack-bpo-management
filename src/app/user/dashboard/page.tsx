@@ -179,11 +179,12 @@ export default function UserDashboard() {
             />
           </div>
           <div className="flex items-center space-x-2 mr-4">
-            <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none">
-              <UserIcon className="w-3 h-3 mr-1" /> {profile?.username || 'Loading...'}
+            <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none px-4 py-1.5">
+              <UserIcon className="w-4 h-4 mr-2" /> 
+              <span className="font-bold">{profile?.username || 'Loading...'}</span>
             </Badge>
           </div>
-          <Button variant="ghost" onClick={handleLogout}>
+          <Button variant="ghost" className="text-slate-500 hover:text-slate-900" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" /> Logout
           </Button>
         </div>
@@ -193,7 +194,7 @@ export default function UserDashboard() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold text-secondary">Secure Workspace</h1>
-            <p className="text-muted-foreground">Dynamic deception-based document protection active</p>
+            <p className="text-muted-foreground text-sm">Dynamic deception-based document protection active</p>
           </div>
           <div className="flex items-center gap-4">
             <input

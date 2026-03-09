@@ -32,7 +32,7 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog"
-import { useAuth, useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from "@/firebase"
+import { useAuth, useFirestore, useCollection, useMemoFirebase, useDoc, useUser } from "@/firebase"
 import { signOut, createUserWithEmailAndPassword } from "firebase/auth"
 import { collection, query, orderBy, limit, doc, setDoc, getDocs, where } from "firebase/firestore"
 import { logActivity } from "@/services/activityLogger"
@@ -79,7 +79,7 @@ export default function AdminDashboard() {
     const uploads = logs.filter(l => l.action === 'Document Uploaded').length
     const accesses = logs.filter(l => l.action === 'Document Opened' || l.action === 'Document Viewed').length
     const decoys = logs.filter(l => l.action === 'Decoy Activated').length
-    const breaches = logs.filter(l => l.action === 'Simulated Breach Triggered' || l.action === 'Unauthorized Access Attempt').length
+    const breaches = logs.filter(l => l.action === 'Simulated Breach Triggered' || l.action === 'Unauthorized Access Attempt' || l.action === 'Login Failure').length
 
     return [
       { title: "Active Users", value: (users?.length || 0).toString(), icon: Users, color: "text-blue-600" },
@@ -119,7 +119,7 @@ export default function AdminDashboard() {
     setCreatingUser(true)
     try {
       // Check username unique
-      const usernameQuery = query(collection(db, "users"), where("username", "==", newUsername));
+      const usernameQuery = query(collection(db, "users"), where("username", "==", newUsername), limit(1));
       const usernameSnap = await getDocs(usernameQuery);
       if (!usernameSnap.empty) {
         throw new Error("Username already taken");
@@ -131,7 +131,8 @@ export default function AdminDashboard() {
         username: newUsername,
         email: newUserEmail,
         role: 'User',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString()
       })
 
       await logActivity(db, {
@@ -168,20 +169,21 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <div className="bg-secondary text-white p-4 flex justify-between items-center px-8 border-b border-primary/20">
+      <div className="bg-secondary text-white p-4 flex justify-between items-center px-8 border-b border-primary/20 shadow-xl relative z-20">
         <div className="flex items-center space-x-2">
           <ShieldAlert className="text-accent" />
           <span className="font-bold text-xl tracking-tight uppercase">IntelliSecureX <span className="text-[10px] font-black opacity-50 ml-2 tracking-[0.3em]">Command Center</span></span>
         </div>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2 mr-4">
-            <Badge variant="outline" className="text-white border-white/20">
-              <Monitor className="w-3 h-3 mr-1" /> ADMIN: {profile?.username || 'Loading...'}
+            <Badge variant="outline" className="text-white border-white/20 px-3 py-1">
+              <Monitor className="w-3 h-3 mr-2" /> 
+              <span className="font-bold tracking-widest uppercase">ADMIN: {profile?.username || 'Loading...'}</span>
             </Badge>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="text-secondary bg-white hover:bg-slate-50 border-none font-bold text-xs">
+              <Button variant="outline" className="text-secondary bg-white hover:bg-slate-50 border-none font-bold text-xs shadow-sm">
                 <UserPlus className="w-4 h-4 mr-2" /> PROVISION USER
               </Button>
             </DialogTrigger>
@@ -246,7 +248,7 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-black text-secondary uppercase tracking-tight">System Telemetry</h1>
             <p className="text-muted-foreground font-medium">Identity-aware activity stream and deception performance</p>
           </div>
-          <div className="text-xs font-bold text-slate-400 flex items-center uppercase tracking-widest">
+          <div className="text-xs font-bold text-slate-400 flex items-center uppercase tracking-widest bg-slate-100 px-3 py-1.5 rounded-full">
             <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-ping" />
             Live Network Feed
           </div>
@@ -266,7 +268,7 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        <Card className="border-none shadow-md overflow-hidden">
+        <Card className="border-none shadow-md overflow-hidden bg-white">
           <CardHeader className="bg-white border-b flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-lg font-bold">Real-Time Activity Feed</CardTitle>
@@ -277,7 +279,7 @@ export default function AdminDashboard() {
             <Table>
               <TableHeader className="bg-slate-50">
                 <TableRow>
-                  <TableHead className="text-[10px] font-black uppercase tracking-wider">User Context</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-wider">User Identity</TableHead>
                   <TableHead className="text-[10px] font-black uppercase tracking-wider">Action</TableHead>
                   <TableHead className="text-[10px] font-black uppercase tracking-wider">Document Context</TableHead>
                   <TableHead className="text-[10px] font-black uppercase tracking-wider">Timestamp</TableHead>
@@ -286,10 +288,10 @@ export default function AdminDashboard() {
               </TableHeader>
               <TableBody>
                 {logs?.map((log) => (
-                  <TableRow key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                  <TableRow key={log.id} className="hover:bg-slate-50/50 transition-colors border-b">
                     <TableCell className="max-w-[200px]">
-                      <div className="font-bold text-slate-700 truncate">{log.username || 'System'}</div>
-                      <div className="font-mono text-[9px] text-slate-400 truncate uppercase tracking-tighter">{log.role || 'sys'} | {log.userId}</div>
+                      <div className="font-black text-slate-800 uppercase tracking-tight text-sm">{log.username || 'System'}</div>
+                      <div className="font-mono text-[9px] text-slate-400 truncate uppercase tracking-tighter">{log.role || 'sys'} | {log.email || 'N/A'}</div>
                     </TableCell>
                     <TableCell className="font-bold text-slate-800 text-sm">{log.action}</TableCell>
                     <TableCell className="text-slate-500 italic text-sm font-medium">{log.documentName || '—'}</TableCell>
