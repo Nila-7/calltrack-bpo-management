@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -7,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Users, FileText, ShieldAlert, Zap, Lock, LogOut, ChevronRight, Activity } from "lucide-react"
-import { useAuth, useFirestore, useCollection } from "@/firebase"
+import { useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase"
 import { signOut } from "firebase/auth"
 import { collection, query, orderBy, limit } from "firebase/firestore"
 
@@ -16,10 +17,10 @@ export default function AdminDashboard() {
   const auth = useAuth()
   const db = useFirestore()
 
-  const logsQuery = useMemo(() => query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(50)), [db])
+  const logsQuery = useMemoFirebase(() => query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(50)), [db])
   const { data: logs, isLoading: logsLoading } = useCollection(logsQuery)
 
-  const usersQuery = useMemo(() => collection(db, 'users'), [db])
+  const usersQuery = useMemoFirebase(() => collection(db, 'users'), [db])
   const { data: users } = useCollection(usersQuery)
 
   const stats = useMemo(() => {

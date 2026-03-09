@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -18,7 +19,7 @@ import {
   Unlock,
   Loader2
 } from "lucide-react"
-import { useAuth, useFirestore, useUser, useDoc, useCollection } from "@/firebase"
+import { useAuth, useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from "@/firebase"
 import { logActivity } from "@/services/activityLogger"
 import { useToast } from "@/hooks/use-toast"
 import { collection, doc } from "firebase/firestore"
@@ -34,14 +35,14 @@ export default function DocumentViewer() {
   const [showClassification, setShowClassification] = useState(false)
   const [suspiciousMode, setSuspiciousMode] = useState(false)
 
-  const docRef = useMemo(() => {
+  const docRef = useMemoFirebase(() => {
     if (!user || !id) return null
     return doc(db, 'users', user.uid, 'documents', id)
   }, [db, user, id])
 
   const { data: document, isLoading: docLoading } = useDoc(docRef)
 
-  const detectionsQuery = useMemo(() => {
+  const detectionsQuery = useMemoFirebase(() => {
     if (!user || !id) return null
     return collection(db, 'users', user.uid, 'documents', id, 'entity_detections')
   }, [db, user, id])
@@ -54,7 +55,6 @@ export default function DocumentViewer() {
     let text = document.content
     let offset = 0
     
-    // Sort detections by startIndex to avoid index shifting issues
     const sorted = [...detections].sort((a, b) => a.startIndex - b.startIndex)
     
     sorted.forEach(entity => {

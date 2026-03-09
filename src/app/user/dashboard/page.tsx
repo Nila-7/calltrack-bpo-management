@@ -1,9 +1,11 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { 
   FileText, 
@@ -18,7 +20,7 @@ import {
   Plus,
   Loader2
 } from "lucide-react"
-import { useAuth, useFirestore, useUser, useCollection } from "@/firebase"
+import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
 import { signOut } from "firebase/auth"
 import { collection, addDoc, serverTimestamp, doc, deleteDoc } from "firebase/firestore"
 import { logActivity } from "@/services/activityLogger"
@@ -35,7 +37,7 @@ export default function UserDashboard() {
   const [uploading, setUploading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
 
-  const docsQuery = useMemo(() => {
+  const docsQuery = useMemoFirebase(() => {
     if (!user) return null
     return collection(db, 'users', user.uid, 'documents')
   }, [db, user])
@@ -73,14 +75,9 @@ export default function UserDashboard() {
 
     setUploading(true)
     try {
-      // For this prototype, we read the text directly if it's a TXT file
-      // In a real app, you'd use a server-side parser for PDF/DOCX
       const text = await file.text()
-      
-      // 1. Send to Gemini for entity detection
       const { entities } = await detectEntitiesAction({ text })
 
-      // 2. Store document metadata and content in Firestore
       const docRef = await addDoc(collection(db, 'users', user.uid, 'documents'), {
         userId: user.uid,
         fileName: file.name,
@@ -92,7 +89,6 @@ export default function UserDashboard() {
         createdAt: serverTimestamp()
       })
 
-      // 3. Store entity detections
       for (const entity of entities) {
         await addDoc(collection(db, 'users', user.uid, 'documents', docRef.id, 'entity_detections'), {
           ...entity,
@@ -125,9 +121,11 @@ export default function UserDashboard() {
     }
   }
 
-  const filteredDocs = docs?.filter(doc => 
-    doc.fileName.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || []
+  const filteredDocs = useMemo(() => {
+    return docs?.filter(doc => 
+      doc.fileName.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || []
+  }, [docs, searchTerm])
 
   return (
     <div className="min-h-screen bg-[#F2F4F7]">
