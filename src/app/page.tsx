@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -31,27 +30,31 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    
+    const cleanUsername = username.trim()
+    const cleanEmail = email.trim()
+
     try {
       if (isSignUp) {
         if (password !== confirmPassword) {
           throw new Error("Passwords do not match")
         }
 
-        // 1. Check if username unique (allowed by new security rules)
-        const usernameQuery = query(collection(db, "users"), where("username", "==", username), limit(1));
+        // 1. Check if username unique
+        const usernameQuery = query(collection(db, "users"), where("username", "==", cleanUsername), limit(1));
         const usernameSnap = await getDocs(usernameQuery);
         if (!usernameSnap.empty) {
           throw new Error("Username already taken");
         }
 
         // 2. Create Auth User
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+        const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password)
         const uid = userCredential.user.uid
 
         // 3. Create Firestore Profile
         const newUser = {
-          username,
-          email,
+          username: cleanUsername,
+          email: cleanEmail,
           role: loginType === 'admin' ? 'Admin' : 'User',
           createdAt: new Date().toISOString(),
           lastLogin: new Date().toISOString()
@@ -59,17 +62,17 @@ export default function LoginPage() {
         
         await setDoc(doc(db, 'users', uid), newUser)
 
-        // 4. Log the creation
+        // 4. Log the creation - CRITICAL: await this before signOut
         await logActivity(db, {
           userId: uid,
-          username: username,
-          email: email,
+          username: cleanUsername,
+          email: cleanEmail,
           role: loginType === 'admin' ? 'admin' : 'user',
           action: 'User Created',
           status: 'Success'
         })
 
-        // 5. Sign out and redirect to login as per requirements
+        // 5. Sign out as per requirements for redirect
         await signOut(auth)
         
         toast({
@@ -85,12 +88,10 @@ export default function LoginPage() {
 
       } else {
         // LOGIN FLOW: Map username to email
-        const userQuery = query(collection(db, "users"), where("username", "==", username), limit(1));
+        const userQuery = query(collection(db, "users"), where("username", "==", cleanUsername), limit(1));
         const userSnap = await getDocs(userQuery);
         
         if (userSnap.empty) {
-          // Log failure attempt if username exists but we can't tell, 
-          // but here we just throw error for UX.
           throw new Error("Invalid username or password");
         }
         
@@ -124,7 +125,6 @@ export default function LoginPage() {
 
           router.push(userData.role === 'Admin' ? '/admin/dashboard' : '/user/dashboard')
         } catch (loginError: any) {
-          // Log login failure
           await logActivity(db, {
             userId: userUid,
             username: userData.username,

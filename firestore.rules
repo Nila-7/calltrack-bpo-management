@@ -19,19 +19,15 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
     match /users/{userId} {
-      // Allow get for any signed in user to load their own or others' basic profiles
       allow get: if isSignedIn();
-      // Allow anyone to check for a username (limit 1) to support "Login by Username" and "Unique Username" checks.
       allow list: if isAdmin() || (request.query.limit == 1);
-      // Allow self-registration: user must be signed in (via Firebase Auth) and creating their own document.
       allow create: if isSignedIn() && request.auth.uid == userId;
-      // Owners and Admins can update profiles.
       allow update: if isOwner(userId) || isAdmin();
-      // Only Admins can delete users.
       allow delete: if isAdmin();
     }
 
@@ -49,7 +45,7 @@ service cloud.firestore {
     match /activity_logs/{activityLogId} {
       // Admins see all logs. Users see their own identity-mapped logs.
       allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if false; // Audit integrity
       allow delete: if isAdmin();
     }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { collection, addDoc, serverTimestamp, Firestore } from 'firebase/firestore';
@@ -18,7 +17,8 @@ export type SystemAction =
   | 'Decoy Activated'
   | 'Simulated Breach Triggered'
   | 'Unauthorized Access Attempt'
-  | 'System Alert Triggered';
+  | 'System Alert Triggered'
+  | 'Login Failure';
 
 export interface ActivityLog {
   userId: string;
@@ -35,7 +35,7 @@ export interface ActivityLog {
 
 /**
  * Logs a system activity to Firestore.
- * Ensures every log is tied to a user identity and role.
+ * Returns the promise of the write operation to allow awaiting for critical lifecycle events.
  */
 export async function logActivity(
   db: Firestore,
@@ -47,7 +47,7 @@ export async function logActivity(
     timestamp: serverTimestamp(),
   };
 
-  addDoc(colRef, logData).catch((error) => {
+  return addDoc(colRef, logData).catch((error) => {
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
@@ -56,6 +56,7 @@ export async function logActivity(
         requestResourceData: logData,
       })
     );
+    throw error;
   });
 }
 
@@ -81,7 +82,7 @@ export async function trackSession(
     createdAt: serverTimestamp(),
   };
 
-  addDoc(colRef, sessionData).catch((error) => {
+  return addDoc(colRef, sessionData).catch((error) => {
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
@@ -90,5 +91,6 @@ export async function trackSession(
         requestResourceData: sessionData,
       })
     );
+    throw error;
   });
 }
