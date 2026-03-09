@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -6,16 +7,19 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ShieldCheck, ChevronLeft, Lock } from "lucide-react"
+import { ShieldCheck, ChevronLeft, Loader2 } from "lucide-react"
 import { useAuth, useFirestore } from "@/firebase"
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc } from "firebase/firestore"
 import { logActivity } from "@/services/activityLogger"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AdminLoginPage() {
   const router = useRouter()
   const auth = useAuth()
   const db = useFirestore()
+  const { toast } = useToast()
+  
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState("")
@@ -28,7 +32,6 @@ export default function AdminLoginPage() {
       let userCredential;
       if (isSignUp) {
         userCredential = await createUserWithEmailAndPassword(auth, email, password)
-        // Store admin role
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           email,
           role: 'Admin',
@@ -50,10 +53,30 @@ export default function AdminLoginPage() {
         action: 'Admin authenticated',
         status: 'Success'
       })
+      
+      toast({
+        title: "Authentication Successful",
+        description: "Welcome to the Admin Console.",
+      })
+      
       router.push('/admin/dashboard')
     } catch (error: any) {
       console.error("Auth error", error)
-      alert(error.message)
+      let message = "An unexpected error occurred."
+      
+      if (error.code === 'auth/invalid-credential') {
+        message = "Invalid email or password. Please check your credentials or sign up."
+      } else if (error.code === 'auth/email-already-in-use') {
+        message = "This email is already registered. Try logging in instead."
+      } else if (error.code === 'auth/weak-password') {
+        message = "Password should be at least 6 characters."
+      }
+
+      toast({
+        variant: "destructive",
+        title: "Authentication Failed",
+        description: message,
+      })
     } finally {
       setLoading(false)
     }
@@ -102,6 +125,7 @@ export default function AdminLoginPage() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button className="w-full h-12" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               {loading ? "Authenticating..." : isSignUp ? "Create Admin Account" : "Login as Admin"}
             </Button>
             <Button 

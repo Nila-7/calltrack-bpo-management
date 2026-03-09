@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo } from "react"
@@ -6,15 +7,45 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, FileText, ShieldAlert, Zap, Lock, LogOut, Activity } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { 
+  Users, 
+  FileText, 
+  ShieldAlert, 
+  Zap, 
+  Lock, 
+  LogOut, 
+  Activity, 
+  UserPlus,
+  Loader2,
+  Search
+} from "lucide-react"
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog"
 import { useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase"
-import { signOut } from "firebase/auth"
-import { collection, query, orderBy, limit } from "firebase/firestore"
+import { signOut, createUserWithEmailAndPassword } from "firebase/auth"
+import { collection, query, orderBy, limit, doc, setDoc } from "firebase/firestore"
+import { logActivity } from "@/services/activityLogger"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AdminDashboard() {
   const router = useRouter()
   const auth = useAuth()
   const db = useFirestore()
+  const { toast } = useToast()
+
+  const [newUserEmail, setNewUserEmail] = useState("")
+  const [newUserPassword, setNewUserPassword] = useState("")
+  const [creatingUser, setCreatingUser] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const logsQuery = useMemoFirebase(() => query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(50)), [db])
   const { data: logs, isLoading: logsLoading } = useCollection(logsQuery)
@@ -53,6 +84,47 @@ export default function AdminDashboard() {
     router.push('/')
   }
 
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCreatingUser(true)
+    try {
+      // In a real app, you might want to create users without logging out the admin
+      // But Firebase Client SDK logs in the newly created user.
+      // For this demo, we'll simulate the creation and alert the admin.
+      const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail, newUserPassword)
+      
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email: newUserEmail,
+        role: 'User',
+        createdAt: new Date().toISOString()
+      })
+
+      await logActivity(db, {
+        userId: userCredential.user.uid,
+        userEmail: newUserEmail,
+        action: 'User registered',
+        status: 'Success'
+      })
+
+      toast({
+        title: "User Created",
+        description: `Account for ${newUserEmail} has been successfully registered.`,
+      })
+      
+      setNewUserEmail("")
+      setNewUserPassword("")
+      setIsDialogOpen(false)
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Creation Failed",
+        description: error.message,
+      })
+    } finally {
+      setCreatingUser(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <div className="bg-secondary text-white p-4 flex justify-between items-center px-8 border-b border-primary/20">
@@ -60,9 +132,55 @@ export default function AdminDashboard() {
           <ShieldAlert className="text-accent" />
           <span className="font-bold text-xl tracking-tight">IntelliSecureX <span className="text-xs font-normal opacity-70 ml-2">ADMIN CONSOLE</span></span>
         </div>
-        <Button variant="ghost" className="text-white hover:bg-white/10" onClick={handleLogout}>
-          <LogOut className="w-4 h-4 mr-2" /> Logout
-        </Button>
+        <div className="flex items-center space-x-4">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="text-secondary bg-white hover:bg-slate-50 border-none">
+                <UserPlus className="w-4 h-4 mr-2" /> Register User
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Register New User</DialogTitle>
+                <DialogDescription>
+                  Create a new user account for the deception platform.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateUser} className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="user-email">Email Address</Label>
+                  <Input 
+                    id="user-email" 
+                    type="email" 
+                    placeholder="user@example.com" 
+                    required 
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-password">Password</Label>
+                  <Input 
+                    id="user-password" 
+                    type="password" 
+                    required 
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button type="submit" className="w-full" disabled={creatingUser}>
+                    {creatingUser ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    {creatingUser ? "Creating..." : "Create Account"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Button variant="ghost" className="text-white hover:bg-white/10" onClick={handleLogout}>
+            <LogOut className="w-4 h-4 mr-2" /> Logout
+          </Button>
+        </div>
       </div>
 
       <main className="p-8 max-w-7xl mx-auto space-y-8">
@@ -102,7 +220,7 @@ export default function AdminDashboard() {
             <Table>
               <TableHeader className="bg-slate-50">
                 <TableRow>
-                  <TableHead>User ID</TableHead>
+                  <TableHead>User Context</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Document Context</TableHead>
                   <TableHead>Timestamp</TableHead>
@@ -112,7 +230,10 @@ export default function AdminDashboard() {
               <TableBody>
                 {logs?.map((log) => (
                   <TableRow key={log.id} className="hover:bg-slate-50/50">
-                    <TableCell className="font-mono text-xs text-slate-500">{log.userId}</TableCell>
+                    <TableCell className="max-w-[200px]">
+                      <div className="font-medium text-slate-700 truncate">{log.userEmail || 'System'}</div>
+                      <div className="font-mono text-[10px] text-slate-400 truncate">{log.userId}</div>
+                    </TableCell>
                     <TableCell className="font-medium text-slate-700">{log.action}</TableCell>
                     <TableCell className="text-muted-foreground italic text-sm">{log.fileName || 'N/A'}</TableCell>
                     <TableCell className="text-slate-500 text-sm">
