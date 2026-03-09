@@ -4,12 +4,10 @@ import { useState, useMemo, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { 
   ChevronLeft, 
   ShieldAlert, 
   FileText,
-  Lock,
   Loader2
 } from "lucide-react"
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from "@/firebase"
@@ -133,18 +131,6 @@ export default function DocumentViewer() {
 
       {/* Main Content: Centered PDF-Style Document */}
       <div className="flex-1 overflow-auto flex flex-col items-center py-12 px-4">
-        {/* Label Indicator Above Document */}
-        <div className="w-full max-w-[850px] mb-4 flex justify-start">
-          <div className={`flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-            viewMode === 'original' 
-              ? 'bg-slate-100 text-slate-600 border-slate-200' 
-              : 'bg-red-50 text-red-600 border-red-200 animate-pulse'
-          }`}>
-            <Lock className="w-3 h-3 mr-2" />
-            {viewMode === 'original' ? 'Original Data' : 'Decoy Data'}
-          </div>
-        </div>
-
         {/* PDF Page Container */}
         <Card className="w-full max-w-[850px] min-h-[1100px] border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white rounded-none relative">
           <CardContent className="p-20 font-mono text-sm leading-[1.8] whitespace-pre-wrap select-none text-slate-800">
