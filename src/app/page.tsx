@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, User, ShieldCheck, Lock } from "lucide-react"
+import { Shield, User, ShieldCheck, Lock, Loader2 } from "lucide-react"
 import { useAuth, useFirestore } from "@/firebase"
 import { signInAnonymously } from "firebase/auth"
 import { logActivity } from "@/services/activityLogger"
@@ -19,7 +19,8 @@ export default function LoginPage() {
     setLoading('user')
     try {
       const userCredential = await signInAnonymously(auth)
-      await logActivity(db, {
+      // Log authentication event
+      logActivity(db, {
         userId: userCredential.user.uid,
         userEmail: 'Anonymous User',
         action: 'User authenticated',
@@ -83,7 +84,7 @@ export default function LoginPage() {
               disabled={loading !== null}
             >
               {loading === 'user' ? (
-                <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <>
                   <User className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />

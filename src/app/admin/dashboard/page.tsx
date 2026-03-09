@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -47,11 +46,15 @@ export default function AdminDashboard() {
   const [creatingUser, setCreatingUser] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  const logsQuery = useMemoFirebase(() => query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(50)), [db])
+  // Memoize logs query
+  const logsQuery = useMemoFirebase(() => 
+    query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(50))
+  , [db])
   const { data: logs, isLoading: logsLoading } = useCollection(logsQuery)
 
-  const usersQuery = useMemoFirebase(() => collection(db, 'users'), [db])
-  const { data: users } = useCollection(usersQuery)
+  // Memoize users collection
+  const usersCollection = useMemoFirebase(() => collection(db, 'users'), [db])
+  const { data: users } = useCollection(usersCollection)
 
   const stats = useMemo(() => {
     if (!logs || !users) return []
@@ -62,7 +65,7 @@ export default function AdminDashboard() {
     const breaches = logs.filter(l => l.action === 'Unauthorized access attempt').length
 
     return [
-      { title: "Total Users", value: users.length.toString(), icon: Users, color: "text-blue-600" },
+      { title: "Total Users", value: (users?.length || 0).toString(), icon: Users, color: "text-blue-600" },
       { title: "Documents Uploaded", value: uploads.toString(), icon: FileText, color: "text-indigo-600" },
       { title: "Documents Accessed", value: accesses.toString(), icon: Zap, color: "text-amber-600" },
       { title: "Decoy Activations", value: decoys.toString(), icon: ShieldAlert, color: "text-red-600" },
@@ -88,9 +91,7 @@ export default function AdminDashboard() {
     e.preventDefault()
     setCreatingUser(true)
     try {
-      // In a real app, you might want to create users without logging out the admin
-      // But Firebase Client SDK logs in the newly created user.
-      // For this demo, we'll simulate the creation and alert the admin.
+      // Create user (Note: This might sign out the admin in some Firebase Client SDK configurations)
       const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail, newUserPassword)
       
       await setDoc(doc(db, 'users', userCredential.user.uid), {
@@ -99,7 +100,7 @@ export default function AdminDashboard() {
         createdAt: new Date().toISOString()
       })
 
-      await logActivity(db, {
+      logActivity(db, {
         userId: userCredential.user.uid,
         userEmail: newUserEmail,
         action: 'User registered',
@@ -170,7 +171,7 @@ export default function AdminDashboard() {
                 </div>
                 <DialogFooter>
                   <Button type="submit" className="w-full" disabled={creatingUser}>
-                    {creatingUser ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    {creatingUser && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     {creatingUser ? "Creating..." : "Create Account"}
                   </Button>
                 </DialogFooter>
@@ -244,7 +245,7 @@ export default function AdminDashboard() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!logsLoading && logs?.length === 0 && (
+                {!logsLoading && (!logs || logs.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No system events recorded yet.
