@@ -24,8 +24,12 @@ const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
   },
   
   PAN_NUMBER: (original) => {
-    if (original === 'BQTPS9172M') return 'ABTPS7421L';
-    return 'ABTPS' + Math.floor(1000 + Math.random() * 9000) + 'L';
+    // Pattern: 5 letters, 4 digits, 1 letter (AAAAA9999A)
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const randomLetters = (len: number) => Array.from({length: len}, () => letters[Math.floor(Math.random() * letters.length)]).join('');
+    const randomDigits = (len: number) => Array.from({length: len}, () => Math.floor(Math.random() * 10)).join('');
+    
+    return `${randomLetters(5)}${randomDigits(4)}${randomLetters(1)}`;
   },
   
   AADHAAR_NUMBER: (original) => {

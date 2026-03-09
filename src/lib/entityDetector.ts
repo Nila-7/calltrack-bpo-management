@@ -26,6 +26,8 @@ const KEY_MAP: Record<string, EntityType> = {
   'Date of Birth': 'DATE_OF_BIRTH',
   'DOB': 'DATE_OF_BIRTH',
   'PAN': 'PAN_NUMBER',
+  'PAN Number': 'PAN_NUMBER',
+  'Government ID (PAN)': 'PAN_NUMBER',
   'Aadhaar Number': 'AADHAAR_NUMBER',
   'Aadhaar': 'AADHAAR_NUMBER',
   'Address': 'ADDRESS',
