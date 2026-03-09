@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, FileText, ShieldAlert, Zap, Lock, LogOut, ChevronRight, Activity } from "lucide-react"
+import { Users, FileText, ShieldAlert, Zap, Lock, LogOut, Activity } from "lucide-react"
 import { useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase"
 import { signOut } from "firebase/auth"
 import { collection, query, orderBy, limit } from "firebase/firestore"
@@ -33,8 +32,8 @@ export default function AdminDashboard() {
 
     return [
       { title: "Total Users", value: users.length.toString(), icon: Users, color: "text-blue-600" },
-      { title: "Documents Processed", value: uploads.toString(), icon: FileText, color: "text-indigo-600" },
-      { title: "Safe Accesses", value: accesses.toString(), icon: Zap, color: "text-amber-600" },
+      { title: "Documents Uploaded", value: uploads.toString(), icon: FileText, color: "text-indigo-600" },
+      { title: "Documents Accessed", value: accesses.toString(), icon: Zap, color: "text-amber-600" },
       { title: "Decoy Activations", value: decoys.toString(), icon: ShieldAlert, color: "text-red-600" },
       { title: "Security Breaches", value: breaches.toString(), icon: Lock, color: "text-red-800" },
     ]
@@ -69,8 +68,8 @@ export default function AdminDashboard() {
       <main className="p-8 max-w-7xl mx-auto space-y-8">
         <div className="flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-bold text-secondary">System Overview</h1>
-            <p className="text-muted-foreground">Real-time monitoring of document security events</p>
+            <h1 className="text-3xl font-bold text-secondary">System Monitoring</h1>
+            <p className="text-muted-foreground">Real-time entity detection and deception telemetry</p>
           </div>
           <div className="text-sm text-muted-foreground flex items-center">
             <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-ping" />
@@ -95,8 +94,8 @@ export default function AdminDashboard() {
         <Card className="border-none shadow-md overflow-hidden">
           <CardHeader className="bg-white border-b flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Recent System Activity</CardTitle>
-              <p className="text-xs text-muted-foreground">Detailed logs of all authenticated interactions</p>
+              <CardTitle className="text-lg">Live Activity Feed</CardTitle>
+              <p className="text-xs text-muted-foreground">Centralized logs for all security-relevant events</p>
             </div>
           </CardHeader>
           <CardContent className="p-0">

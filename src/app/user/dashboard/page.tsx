@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -6,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { 
   FileText, 
   Upload, 
@@ -25,7 +23,8 @@ import { signOut } from "firebase/auth"
 import { collection, addDoc, serverTimestamp, doc, deleteDoc } from "firebase/firestore"
 import { logActivity } from "@/services/activityLogger"
 import { useToast } from "@/hooks/use-toast"
-import { detectEntitiesAction } from "@/ai/flows/detect-entities-flow"
+import { detectEntities } from "@/lib/entityDetector"
+import { generateDecoyValue } from "@/lib/decoyGenerator"
 
 export default function UserDashboard() {
   const router = useRouter()
@@ -76,7 +75,7 @@ export default function UserDashboard() {
     setUploading(true)
     try {
       const text = await file.text()
-      const { entities } = await detectEntitiesAction({ text })
+      const entities = detectEntities(text)
 
       const docRef = await addDoc(collection(db, 'users', user.uid, 'documents'), {
         userId: user.uid,
@@ -90,8 +89,10 @@ export default function UserDashboard() {
       })
 
       for (const entity of entities) {
+        const decoy = generateDecoyValue(entity)
         await addDoc(collection(db, 'users', user.uid, 'documents', docRef.id, 'entity_detections'), {
           ...entity,
+          decoy, // Store the specific decoy generated for this document
           createdAt: serverTimestamp()
         })
       }
@@ -107,7 +108,7 @@ export default function UserDashboard() {
 
       toast({
         title: "Secure Upload Complete",
-        description: "Gemini has identified and processed sensitive entities.",
+        description: "Sensitive entities have been identified and processed.",
       })
     } catch (error) {
       console.error("Upload failed", error)
@@ -157,14 +158,14 @@ export default function UserDashboard() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold text-secondary">Document Vault</h1>
-            <p className="text-muted-foreground">All files are protected by Gemini-powered deception engine</p>
+            <p className="text-muted-foreground">All files are protected by structure-preserving deception</p>
           </div>
           <div className="flex items-center gap-4">
             <input
               type="file"
               id="file-upload"
               className="hidden"
-              accept=".txt,.pdf,.docx"
+              accept=".txt"
               onChange={handleFileUpload}
               disabled={uploading}
             />
@@ -175,7 +176,7 @@ export default function UserDashboard() {
             >
               <label htmlFor="file-upload" className="cursor-pointer flex items-center">
                 {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                {uploading ? "Analyzing..." : "Secure Upload"}
+                {uploading ? "Detecting..." : "Secure Upload"}
               </label>
             </Button>
           </div>

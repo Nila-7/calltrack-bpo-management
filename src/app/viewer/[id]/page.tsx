@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -6,6 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { 
   ChevronLeft, 
   ShieldCheck, 
@@ -17,12 +17,14 @@ import {
   FileText,
   Lock,
   Unlock,
-  Loader2
+  Loader2,
+  Table as TableIcon
 } from "lucide-react"
 import { useAuth, useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from "@/firebase"
 import { logActivity } from "@/services/activityLogger"
 import { useToast } from "@/hooks/use-toast"
 import { collection, doc } from "firebase/firestore"
+import { generateDecoyDocument } from "@/lib/decoyGenerator"
 
 export default function DocumentViewer() {
   const router = useRouter()
@@ -51,22 +53,7 @@ export default function DocumentViewer() {
 
   const decoyContent = useMemo(() => {
     if (!document?.content || !detections) return ""
-    
-    let text = document.content
-    let offset = 0
-    
-    const sorted = [...detections].sort((a, b) => a.startIndex - b.startIndex)
-    
-    sorted.forEach(entity => {
-      const start = entity.startIndex + offset
-      const end = entity.endIndex + offset
-      const decoyValue = entity.decoy
-      
-      text = text.slice(0, start) + decoyValue + text.slice(end)
-      offset += decoyValue.length - entity.original.length
-    })
-    
-    return text
+    return generateDecoyDocument(document.content, detections)
   }, [document, detections])
 
   const handleToggleDecoy = (mode: 'original' | 'decoy') => {
@@ -98,7 +85,7 @@ export default function DocumentViewer() {
     toast({
       variant: "destructive",
       title: "Suspicious Access Detected",
-      description: "Security Protocol 74: Automatic Decoy Serving Activated.",
+      description: "Security Protocol: Automatic Decoy Serving Activated.",
     })
   }
 
@@ -133,7 +120,7 @@ export default function DocumentViewer() {
           <div className="flex items-center space-x-2">
             <FileText className="w-5 h-5 text-primary" />
             <h2 className="font-semibold text-secondary">{document.fileName}</h2>
-            <Badge variant="outline" className="text-[10px] uppercase font-bold text-slate-400">Rule-Protected</Badge>
+            <Badge variant="outline" className="text-[10px] uppercase font-bold text-slate-400">Structure-Protected</Badge>
           </div>
         </div>
 
@@ -155,11 +142,12 @@ export default function DocumentViewer() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel: Document Content */}
         <div className="flex-1 p-8 overflow-auto flex justify-center bg-slate-200/50">
           <Card className="w-full max-w-3xl h-fit min-h-full border-none shadow-xl bg-white rounded-none md:rounded-lg">
             <CardContent className="p-12 font-mono text-sm leading-relaxed whitespace-pre-wrap select-text selection:bg-primary/20">
               <div className="mb-8 flex justify-between border-b pb-4">
-                <div className="text-xs text-slate-400 uppercase tracking-widest font-bold">Document Header</div>
+                <div className="text-xs text-slate-400 uppercase tracking-widest font-bold">Document Feed</div>
                 {viewMode === 'decoy' ? (
                   <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200">
                     <ShieldCheck className="w-3 h-3 mr-1" /> Deception Mode
@@ -173,7 +161,8 @@ export default function DocumentViewer() {
           </Card>
         </div>
 
-        <aside className="w-96 bg-white border-l p-6 overflow-auto space-y-6">
+        {/* Right Panel: Security Controls */}
+        <aside className="w-[450px] bg-white border-l p-6 overflow-auto space-y-6">
           <div className="space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500">Security Controls</h3>
             
@@ -214,8 +203,8 @@ export default function DocumentViewer() {
               variant={showClassification ? "secondary" : "outline"}
               onClick={() => setShowClassification(!showClassification)}
             >
-              <Database className="w-4 h-4 mr-2" /> 
-              {showClassification ? "Hide Classification" : "Show Gemini Analysis"}
+              <TableIcon className="w-4 h-4 mr-2" /> 
+              {showClassification ? "Hide Classification" : "Show Entity Classification"}
             </Button>
           </div>
 
@@ -224,26 +213,27 @@ export default function DocumentViewer() {
           {showClassification && (
             <div className="space-y-4 animate-in slide-in-from-right duration-300">
               <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center">
-                <Info className="w-4 h-4 mr-2 text-primary" /> Entity Analysis
+                <Info className="w-4 h-4 mr-2 text-primary" /> Classification Analysis
               </h3>
-              <div className="space-y-3">
-                {detections?.map((entity, i) => (
-                  <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-primary">{entity.entity_type}</span>
-                      <span className="text-slate-400">Confidence: {(entity.confidence * 100).toFixed(1)}%</span>
-                    </div>
-                    <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
-                      <div className="text-slate-500 bg-white p-1.5 rounded border border-slate-200 truncate" title={entity.original}>
-                        {entity.original}
-                      </div>
-                      <span className="text-slate-300">→</span>
-                      <div className="text-emerald-600 bg-white p-1.5 rounded border border-emerald-100 font-bold truncate">
-                        {entity.decoy}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-slate-50">
+                    <TableRow>
+                      <TableHead className="text-[10px] uppercase font-bold">Entity</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold">Original</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold">Decoy</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detections?.map((entity, i) => (
+                      <TableRow key={i} className="text-xs">
+                        <TableCell className="font-medium text-primary py-2">{entity.key}</TableCell>
+                        <TableCell className="text-slate-500 py-2 truncate max-w-[100px]">{entity.originalValue}</TableCell>
+                        <TableCell className="text-emerald-600 font-bold py-2 truncate max-w-[100px]">{entity.decoyValue}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           )}
@@ -252,7 +242,7 @@ export default function DocumentViewer() {
             <div className="bg-slate-50 p-6 rounded-xl border border-dashed border-slate-200 text-center">
               <ShieldCheck className="w-8 h-8 text-slate-300 mx-auto mb-2" />
               <p className="text-xs text-slate-500 leading-relaxed">
-                Gemini NLP engine has detected {detections?.length || 0} sensitive entities. Click analysis for details.
+                Detection engine has classified {detections?.length || 0} sensitive entities. Click classification for details.
               </p>
             </div>
           )}

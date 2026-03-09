@@ -13,43 +13,52 @@ export type EntityType =
 
 export interface DetectedEntity {
   entityType: EntityType;
+  key: string;
   originalValue: string;
+  decoyValue: string;
   confidence: number;
-  startIndex: number;
-  endIndex: number;
+  lineIndex: number; // For structure-preserving replacement
 }
 
-const PATTERNS: Record<EntityType, RegExp> = {
-  PAN_NUMBER: /[A-Z]{5}[0-9]{4}[A-Z]/g,
-  AADHAAR_NUMBER: /\d{4}\s\d{4}\s\d{4}/g,
-  EMAIL: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
-  PHONE: /\+91\s\d{10}/g,
-  IFSC_CODE: /[A-Z]{4}0[A-Z0-9]{6}/g,
-  DATE_OF_BIRTH: /\d{2}\/\d{2}\/\d{4}/g,
-  BANK_ACCOUNT: /\d{10,16}/g,
-  EMPLOYEE_ID: /EMP-\d{5}|EXP-\d{5}/g,
-  PERSON_NAME: /(?:Rahul Srinivasan|John Doe|Jane Smith|Amit Kumar|Sarah Wilson)/g,
-  ADDRESS: /(?:HDFC Bank|ICICI Bank|Level-\d Infrastructure Systems|Mumbai, India|New York, USA)/g,
-  ACCESS_LEVEL: /Level-\d/g,
+const KEY_MAP: Record<string, EntityType> = {
+  'Full Name': 'PERSON_NAME',
+  'Name': 'PERSON_NAME',
+  'Date of Birth': 'DATE_OF_BIRTH',
+  'DOB': 'DATE_OF_BIRTH',
+  'PAN': 'PAN_NUMBER',
+  'Aadhaar': 'AADHAAR_NUMBER',
+  'Address': 'ADDRESS',
+  'Email': 'EMAIL',
+  'Phone': 'PHONE',
+  'Bank': 'BANK_ACCOUNT', // Used for bank name context
+  'Account Number': 'BANK_ACCOUNT',
+  'IFSC': 'IFSC_CODE',
+  'Access Level': 'ACCESS_LEVEL',
+  'Employee ID': 'EMPLOYEE_ID',
 };
 
 export function detectEntities(text: string): DetectedEntity[] {
+  const lines = text.split('\n');
   const results: DetectedEntity[] = [];
 
-  Object.entries(PATTERNS).forEach(([type, regex]) => {
-    let match;
-    const currentRegex = new RegExp(regex);
-    while ((match = currentRegex.exec(text)) !== null) {
-      results.push({
-        entityType: type as EntityType,
-        originalValue: match[0],
-        confidence: 0.95 + (Math.random() * 0.04), // High confidence for regex matches
-        startIndex: match.index,
-        endIndex: match.index + match[0].length,
-      });
+  lines.forEach((line, index) => {
+    if (line.includes(':')) {
+      const parts = line.split(':');
+      const key = parts[0].trim();
+      const value = parts.slice(1).join(':').trim();
+
+      if (KEY_MAP[key]) {
+        results.push({
+          entityType: KEY_MAP[key],
+          key: key,
+          originalValue: value,
+          decoyValue: '', // Will be filled by generator
+          confidence: 1.0,
+          lineIndex: index,
+        });
+      }
     }
   });
 
-  // Sort by index to handle overlapping or sequential replacements later
-  return results.sort((a, b) => a.startIndex - b.startIndex);
+  return results;
 }
