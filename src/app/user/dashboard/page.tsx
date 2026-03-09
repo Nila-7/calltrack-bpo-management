@@ -15,7 +15,8 @@ import {
   Search,
   MoreVertical,
   Plus,
-  Loader2
+  Loader2,
+  User
 } from "lucide-react"
 import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
 import { signOut } from "firebase/auth"
