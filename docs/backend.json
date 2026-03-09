@@ -1,0 +1,343 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user or administrator in the IntelliSecureX system, managing roles and core profile information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The unique email address of the user, used for login and identification.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the system, either 'Admin' or 'User'."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "role",
+        "createdAt"
+      ]
+    },
+    "Document": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Document",
+      "type": "object",
+      "description": "Stores metadata about a document uploaded by a user, including its storage location, file type, and security processing status.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Document entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who uploaded the document. (Relationship: User 1:N Document)"
+        },
+        "fileName": {
+          "type": "string",
+          "description": "The original name of the uploaded file."
+        },
+        "fileType": {
+          "type": "string",
+          "description": "The type of the document (e.g., 'TXT', 'PDF', 'DOCX')."
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "The URI or path where the actual document content is stored in server storage or cloud storage (e.g., Firebase Storage, S3).",
+          "format": "uri"
+        },
+        "uploadDate": {
+          "type": "string",
+          "description": "Timestamp when the document was uploaded.",
+          "format": "date-time"
+        },
+        "securityStatus": {
+          "type": "string",
+          "description": "The current processing status of the document's security analysis (e.g., 'Pending', 'Processing', 'Processed', 'Failed')."
+        },
+        "hasDecoy": {
+          "type": "boolean",
+          "description": "Indicates whether a decoy version of the document has been successfully generated."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the document entity was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the document entity was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "fileName",
+        "fileType",
+        "storagePath",
+        "uploadDate",
+        "securityStatus",
+        "hasDecoy",
+        "createdAt"
+      ]
+    },
+    "DocumentEntityDetection": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DocumentEntityDetection",
+      "type": "object",
+      "description": "Stores the results of sensitive entity detection and decoy generation for a specific document, including an array of all detected entities and their decoy counterparts.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DocumentEntityDetection entity."
+        },
+        "documentId": {
+          "type": "string",
+          "description": "Reference to the Document for which entities were detected. (Relationship: Document 1:1 DocumentEntityDetection)"
+        },
+        "processingStatus": {
+          "type": "string",
+          "description": "The status of the entity detection process (e.g., 'Completed', 'Failed', 'Pending')."
+        },
+        "engineUsed": {
+          "type": "string",
+          "description": "Indicates which engine was used for entity detection ('Gemini' or 'Regex')."
+        },
+        "detectedEntities": {
+          "type": "array",
+          "description": "An array of objects, where each object describes a detected sensitive entity, its original value, decoy value, confidence, and position.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the entity detection record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the entity detection record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "documentId",
+        "processingStatus",
+        "engineUsed",
+        "detectedEntities",
+        "createdAt"
+      ]
+    },
+    "ActivityLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ActivityLog",
+      "type": "object",
+      "description": "Records all significant actions performed by users and the system for audit, real-time monitoring, and historical analysis on the Admin Dashboard.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ActivityLog entry."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who performed the action. Can be null for system-initiated actions or unauthenticated attempts. (Relationship: User 1:N ActivityLog)"
+        },
+        "action": {
+          "type": "string",
+          "description": "A descriptive code for the action performed (e.g., 'USER_LOGIN', 'DOCUMENT_UPLOADED', 'DECOY_ACTIVATED', 'UNAUTHORIZED_ATTEMPT')."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp when the action occurred.",
+          "format": "date-time"
+        },
+        "documentId": {
+          "type": "string",
+          "description": "Reference to the Document if the action pertains to a specific document. Can be null. (Relationship: Document 1:N ActivityLog)"
+        },
+        "targetUserId": {
+          "type": "string",
+          "description": "Reference to another User if the action targets them (e.g., Admin creates User). Can be null. (Relationship: User 1:N ActivityLog)"
+        },
+        "metadata": {
+          "type": "string",
+          "description": "A JSON string containing additional contextual information about the event (e.g., 'fileName', 'ipAddress', 'status', 'failureReason')."
+        }
+      },
+      "required": [
+        "id",
+        "action",
+        "timestamp"
+      ]
+    },
+    "Session": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Session",
+      "type": "object",
+      "description": "Tracks active user sessions to monitor concurrent usage, 'Active Sessions' on the Admin Dashboard, and user activity timelines.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Session entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User associated with this session. (Relationship: User 1:N Session)"
+        },
+        "loginTime": {
+          "type": "string",
+          "description": "Timestamp when the user logged in and the session started.",
+          "format": "date-time"
+        },
+        "lastActivityTime": {
+          "type": "string",
+          "description": "Timestamp of the last recorded activity for this session, used for inactivity detection.",
+          "format": "date-time"
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "The IP address from which the session originated."
+        },
+        "userAgent": {
+          "type": "string",
+          "description": "The User-Agent string of the client device accessing the system."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "A boolean flag indicating if the session is currently considered active."
+        },
+        "logoutTime": {
+          "type": "string",
+          "description": "Timestamp when the user logged out or the session ended. Null if still active or timed out.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the session entity was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the session entity was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "loginTime",
+        "lastActivityTime",
+        "ipAddress",
+        "userAgent",
+        "isActive",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "user",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles and their roles. A user can read/write their own profile. Admins can read/write all user profiles. Includes 'role' for authorization."
+        }
+      },
+      {
+        "path": "/users/{userId}/documents/{documentId}",
+        "definition": {
+          "entityName": "document",
+          "schema": {
+            "$ref": "#/backend/entities/Document"
+          },
+          "description": "Stores metadata for documents uploaded by a specific user. Authorization is path-based: only the owner ({userId}) can access their documents. Includes 'userId' for explicit ownership and querying, and 'securityStatus' to model explicit state.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the document."
+            },
+            {
+              "name": "documentId",
+              "description": "The unique identifier for the document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/documents/{documentId}/entity_detections/{detectionId}",
+        "definition": {
+          "entityName": "documentEntityDetection",
+          "schema": {
+            "$ref": "#/backend/entities/DocumentEntityDetection"
+          },
+          "description": "Stores the sensitive entity detection results and decoy values for a specific document. Authorization is inherited from the parent document: only the document owner ({userId}) can access these detections. Includes 'documentId' for explicit reference.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns the parent document."
+            },
+            {
+              "name": "documentId",
+              "description": "The unique identifier for the parent document."
+            },
+            {
+              "name": "detectionId",
+              "description": "The unique identifier for the entity detection record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/activity_logs/{activityLogId}",
+        "definition": {
+          "entityName": "activityLog",
+          "schema": {
+            "$ref": "#/backend/entities/ActivityLog"
+          },
+          "description": "A centralized collection for all system activity logs. Admins can read/list all logs. Regular users can only read/list their own logs. Includes 'userId' for direct authorization checks."
+        }
+      },
+      {
+        "path": "/sessions/{sessionId}",
+        "definition": {
+          "entityName": "session",
+          "schema": {
+            "$ref": "#/backend/entities/Session"
+          },
+          "description": "A centralized collection for tracking active user sessions. Admins can read/list all sessions. Regular users can only read/list their own active sessions. Includes 'userId' for direct authorization checks."
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to be secure, scalable, and debuggable by strictly adhering to the core design principles and strategic mandates. Authorization Independence is achieved primarily through structural segregation and judicious denormalization. User-specific data, such as Documents and their associated Entity Detections, are nested under a user's unique path (`/users/{userId}/documents/{documentId}` and `/users/{userId}/documents/{documentId}/entity_detections/{detectionId}`). This path-based ownership means that the `userId` is directly available in the security rules context (`request.auth.uid == userId`) without requiring any `get()` operations on parent documents, thus eliminating hierarchical authorization dependencies and enabling atomic write operations (e.g., creating a user and their first document in a batch). This also ensures all documents within a user's subcollection share the same security posture (only the owner can access them). For global collections like `ActivityLog` and `Session`, authorization independence is maintained by storing the `userId` directly within each document. This allows security rules to check `resource.data.userId == request.auth.uid` for non-admin users, again avoiding `get()` calls to other user profiles for basic record ownership. QAPs (Query Authorization Predictability) are robustly supported. For user-owned data, the hierarchical structure naturally restricts `list` operations; a user can only query documents within their own `/users/{request.auth.uid}/documents` path. This means client-side queries for a user's documents will inherently include the `userId` in the path, which rules can efficiently validate. For `ActivityLog` and `Session` collections, rules will allow `list` operations for administrators, and for regular users, they will mandate a `where('userId', '==', request.auth.uid)` filter on the client-side. The rules will enforce that only logs/sessions belonging to the `request.auth.uid` are returned, preventing data leakage if a user attempts to query broadly or for another user's data. Admin roles are stored in the `/users/{userId}` document itself, and rules can perform a `get()` on the admin's own user profile to check their `role` field. This is a controlled `get()` to establish global privileges, not a hierarchical dependency for resource access."
+  }
+}
