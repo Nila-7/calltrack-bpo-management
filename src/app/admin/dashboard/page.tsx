@@ -1,35 +1,43 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, FileText, ShieldAlert, Zap, Lock, LogOut, ChevronRight } from "lucide-react"
-import { activityLogger, ActivityLog } from "@/services/activityLogger"
+import { Users, FileText, ShieldAlert, Zap, Lock, LogOut, ChevronRight, Activity } from "lucide-react"
+import { useAuth, useFirestore, useCollection } from "@/firebase"
+import { signOut } from "firebase/auth"
+import { collection, query, orderBy, limit } from "firebase/firestore"
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [logs, setLogs] = useState<ActivityLog[]>([])
+  const auth = useAuth()
+  const db = useFirestore()
 
-  useEffect(() => {
-    // Check auth
-    const role = localStorage.getItem('user_role')
-    if (role !== 'admin') {
-      router.push('/')
-      return
-    }
-    setLogs(activityLogger.getLogs())
-  }, [router])
+  const logsQuery = useMemo(() => query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'), limit(50)), [db])
+  const { data: logs, isLoading: logsLoading } = useCollection(logsQuery)
 
-  const stats = [
-    { title: "Total Users", value: "24", icon: Users, color: "text-blue-600" },
-    { title: "Documents Uploaded", value: "142", icon: FileText, color: "text-indigo-600" },
-    { title: "Documents Accessed", value: "892", icon: Zap, color: "text-amber-600" },
-    { title: "Decoy Activations", value: "37", icon: ShieldAlert, color: "text-red-600" },
-    { title: "Unauthorized Attempts", value: "12", icon: Lock, color: "text-red-800" },
-  ]
+  const usersQuery = useMemo(() => collection(db, 'users'), [db])
+  const { data: users } = useCollection(usersQuery)
+
+  const stats = useMemo(() => {
+    if (!logs || !users) return []
+    
+    const uploads = logs.filter(l => l.action === 'Document uploaded').length
+    const accesses = logs.filter(l => l.action === 'Document accessed').length
+    const decoys = logs.filter(l => l.action === 'Decoy activated').length
+    const breaches = logs.filter(l => l.action === 'Unauthorized access attempt').length
+
+    return [
+      { title: "Total Users", value: users.length.toString(), icon: Users, color: "text-blue-600" },
+      { title: "Documents Processed", value: uploads.toString(), icon: FileText, color: "text-indigo-600" },
+      { title: "Safe Accesses", value: accesses.toString(), icon: Zap, color: "text-amber-600" },
+      { title: "Decoy Activations", value: decoys.toString(), icon: ShieldAlert, color: "text-red-600" },
+      { title: "Security Breaches", value: breaches.toString(), icon: Lock, color: "text-red-800" },
+    ]
+  }, [logs, users])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -40,18 +48,19 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleLogout = async () => {
+    await signOut(auth)
+    router.push('/')
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      {/* Sidebar Placeholder / Topbar */}
       <div className="bg-secondary text-white p-4 flex justify-between items-center px-8 border-b border-primary/20">
         <div className="flex items-center space-x-2">
           <ShieldAlert className="text-accent" />
           <span className="font-bold text-xl tracking-tight">IntelliSecureX <span className="text-xs font-normal opacity-70 ml-2">ADMIN CONSOLE</span></span>
         </div>
-        <Button variant="ghost" className="text-white hover:bg-white/10" onClick={() => {
-          localStorage.removeItem('user_role')
-          router.push('/')
-        }}>
+        <Button variant="ghost" className="text-white hover:bg-white/10" onClick={handleLogout}>
           <LogOut className="w-4 h-4 mr-2" /> Logout
         </Button>
       </div>
@@ -68,7 +77,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {stats.map((stat) => (
             <Card key={stat.title} className="border-none shadow-sm hover:shadow-md transition-shadow">
@@ -83,42 +91,45 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Logs Table */}
         <Card className="border-none shadow-md overflow-hidden">
           <CardHeader className="bg-white border-b flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-lg">Recent System Activity</CardTitle>
               <p className="text-xs text-muted-foreground">Detailed logs of all authenticated interactions</p>
             </div>
-            <Button variant="outline" size="sm">Download Logs</Button>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader className="bg-slate-50">
                 <TableRow>
-                  <TableHead className="w-[200px]">User</TableHead>
+                  <TableHead>User ID</TableHead>
                   <TableHead>Action</TableHead>
-                  <TableHead>Document</TableHead>
+                  <TableHead>Document Context</TableHead>
                   <TableHead>Timestamp</TableHead>
                   <TableHead className="text-right">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((log) => (
+                {logs?.map((log) => (
                   <TableRow key={log.id} className="hover:bg-slate-50/50">
-                    <TableCell className="font-medium text-slate-700">{log.user}</TableCell>
-                    <TableCell>
-                      <span className="flex items-center">
-                        {log.action}
-                      </span>
+                    <TableCell className="font-mono text-xs text-slate-500">{log.userId}</TableCell>
+                    <TableCell className="font-medium text-slate-700">{log.action}</TableCell>
+                    <TableCell className="text-muted-foreground italic text-sm">{log.fileName || 'N/A'}</TableCell>
+                    <TableCell className="text-slate-500 text-sm">
+                      {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : 'Just now'}
                     </TableCell>
-                    <TableCell className="text-muted-foreground italic text-sm">{log.document}</TableCell>
-                    <TableCell className="text-slate-500 text-sm">{new Date(log.timestamp).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                       {getStatusBadge(log.status)}
                     </TableCell>
                   </TableRow>
                 ))}
+                {!logsLoading && logs?.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No system events recorded yet.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>

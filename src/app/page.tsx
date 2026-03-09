@@ -5,23 +5,39 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield, User, ShieldCheck, Lock } from "lucide-react"
+import { useAuth, useFirestore } from "@/firebase"
+import { signInAnonymously } from "firebase/auth"
+import { logActivity } from "@/services/activityLogger"
 
 export default function LoginPage() {
   const router = useRouter()
+  const auth = useAuth()
+  const db = useFirestore()
   const [loading, setLoading] = useState<string | null>(null)
 
-  const handleLogin = (role: 'admin' | 'user') => {
-    setLoading(role)
-    // Simulate Firebase Auth Delay
-    setTimeout(() => {
-      localStorage.setItem('user_role', role)
-      router.push(`/${role}/dashboard`)
-    }, 800)
+  const handleUserLogin = async () => {
+    setLoading('user')
+    try {
+      const userCredential = await signInAnonymously(auth)
+      await logActivity(db, {
+        userId: userCredential.user.uid,
+        userEmail: 'Anonymous User',
+        action: 'User authenticated',
+        status: 'Success'
+      })
+      router.push('/user/dashboard')
+    } catch (error) {
+      console.error("Login failed", error)
+      setLoading(null)
+    }
+  }
+
+  const handleAdminLoginRedirect = () => {
+    router.push('/admin/login')
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F2F4F7] p-4 relative overflow-hidden">
-      {/* Abstract Background Decor */}
       <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary rounded-full blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary rounded-full blur-[120px]" />
@@ -44,17 +60,11 @@ export default function LoginPage() {
             <Button 
               className="w-full h-14 text-lg font-medium group transition-all"
               variant="default"
-              onClick={() => handleLogin('admin')}
+              onClick={handleAdminLoginRedirect}
               disabled={loading !== null}
             >
-              {loading === 'admin' ? (
-                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-              ) : (
-                <>
-                  <ShieldCheck className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                  Login as Administrator
-                </>
-              )}
+              <ShieldCheck className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+              Login as Administrator
             </Button>
             
             <div className="relative">
@@ -69,7 +79,7 @@ export default function LoginPage() {
             <Button 
               className="w-full h-14 text-lg font-medium group transition-all"
               variant="outline"
-              onClick={() => handleLogin('user')}
+              onClick={handleUserLogin}
               disabled={loading !== null}
             >
               {loading === 'user' ? (
@@ -77,7 +87,7 @@ export default function LoginPage() {
               ) : (
                 <>
                   <User className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                  Login as Regular User
+                  Login as User
                 </>
               )}
             </Button>
