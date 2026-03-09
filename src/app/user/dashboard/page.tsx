@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { 
   FileText, 
-  Upload, 
   Trash2, 
   Eye, 
   Shield, 
@@ -31,10 +30,16 @@ export default function UserDashboard() {
   const { toast } = useToast()
   const auth = useAuth()
   const db = useFirestore()
-  const { user } = useUser()
+  const { user, isUserLoading } = useUser()
 
   const [uploading, setUploading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/')
+    }
+  }, [user, isUserLoading, router])
 
   const docsQuery = useMemoFirebase(() => {
     if (!user) return null
@@ -44,6 +49,15 @@ export default function UserDashboard() {
   const { data: docs, isLoading: docsLoading } = useCollection(docsQuery)
 
   const handleLogout = async () => {
+    if (user) {
+      await logActivity(db, {
+        userId: user.uid,
+        userEmail: user.email || 'N/A',
+        role: 'user',
+        action: 'User Logout',
+        status: 'Success'
+      })
+    }
     await signOut(auth)
     router.push('/')
   }
@@ -54,14 +68,15 @@ export default function UserDashboard() {
       await deleteDoc(doc(db, 'users', user.uid, 'documents', docId))
       await logActivity(db, {
         userId: user.uid,
-        userEmail: user.email || 'Anonymous',
-        action: 'Document deleted',
-        fileName,
+        userEmail: user.email || 'N/A',
+        role: 'user',
+        action: 'Document Deleted',
+        documentName: fileName,
         status: 'Warning'
       })
       toast({
         title: "Document Deleted",
-        description: `${fileName} has been removed.`,
+        description: `${fileName} has been removed from the vault.`,
       })
     } catch (error) {
       console.error("Delete failed", error)
@@ -88,34 +103,36 @@ export default function UserDashboard() {
         createdAt: serverTimestamp()
       })
 
+      // Store classification results
       for (const entity of entities) {
         const decoy = generateDecoyValue(entity)
         await addDoc(collection(db, 'users', user.uid, 'documents', docRef.id, 'entity_detections'), {
           ...entity,
-          decoy, // Store the specific decoy generated for this document
+          decoyValue: decoy,
           createdAt: serverTimestamp()
         })
       }
 
       await logActivity(db, {
         userId: user.uid,
-        userEmail: user.email || 'Anonymous',
-        action: 'Document uploaded',
+        userEmail: user.email || 'N/A',
+        role: 'user',
+        action: 'Document Uploaded',
         documentId: docRef.id,
-        fileName: file.name,
+        documentName: file.name,
         status: 'Success'
       })
 
       toast({
         title: "Secure Upload Complete",
-        description: "Sensitive entities have been identified and processed.",
+        description: `${file.name} is now protected with active deception.`,
       })
     } catch (error) {
       console.error("Upload failed", error)
       toast({
         variant: "destructive",
         title: "Upload Failed",
-        description: "Error processing document. Please try again.",
+        description: "Error processing document for deception.",
       })
     } finally {
       setUploading(false)
@@ -127,6 +144,8 @@ export default function UserDashboard() {
       doc.fileName.toLowerCase().includes(searchTerm.toLowerCase())
     ) || []
   }, [docs, searchTerm])
+
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>
 
   return (
     <div className="min-h-screen bg-[#F2F4F7]">
@@ -143,10 +162,15 @@ export default function UserDashboard() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input 
               className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-full text-sm focus:ring-2 focus:ring-primary outline-none w-64"
-              placeholder="Search secure documents..."
+              placeholder="Search vault..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+          <div className="flex items-center space-x-2 mr-4">
+            <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none">
+              <User className="w-3 h-3 mr-1" /> {user?.email}
+            </Badge>
           </div>
           <Button variant="ghost" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" /> Logout
@@ -157,8 +181,8 @@ export default function UserDashboard() {
       <main className="p-8 max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-secondary">Document Vault</h1>
-            <p className="text-muted-foreground">All files are protected by structure-preserving deception</p>
+            <h1 className="text-2xl font-bold text-secondary">Secure Workspace</h1>
+            <p className="text-muted-foreground">Dynamic deception-based document protection active</p>
           </div>
           <div className="flex items-center gap-4">
             <input
@@ -176,7 +200,7 @@ export default function UserDashboard() {
             >
               <label htmlFor="file-upload" className="cursor-pointer flex items-center">
                 {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                {uploading ? "Detecting..." : "Secure Upload"}
+                {uploading ? "Analyzing Structure..." : "Secure Upload"}
               </label>
             </Button>
           </div>
@@ -196,13 +220,13 @@ export default function UserDashboard() {
                 </div>
                 <CardTitle className="text-lg font-semibold truncate mt-4">{doc.fileName}</CardTitle>
                 <CardDescription className="flex items-center text-xs uppercase tracking-wider font-medium text-slate-400">
-                  <FolderLock className="w-3 h-3 mr-1" /> Protected {doc.fileType}
+                  <FolderLock className="w-3 h-3 mr-1" /> Protected Document
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex justify-between items-center text-sm text-slate-500 mb-6">
                   <span>{new Date(doc.uploadDate).toLocaleDateString()}</span>
-                  <Badge variant="outline" className="text-[10px]">{doc.securityStatus}</Badge>
+                  <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-100 font-bold">DECEPTION READY</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Button 
@@ -211,10 +235,11 @@ export default function UserDashboard() {
                     onClick={() => {
                       logActivity(db, {
                         userId: user?.uid || '',
-                        userEmail: user?.email || 'Anonymous',
-                        action: 'Document accessed',
+                        userEmail: user?.email || 'N/A',
+                        role: 'user',
+                        action: 'Document Opened',
                         documentId: doc.id,
-                        fileName: doc.fileName,
+                        documentName: doc.fileName,
                         status: 'Success'
                       })
                       router.push(`/viewer/${doc.id}`)
@@ -239,8 +264,8 @@ export default function UserDashboard() {
               <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-10 h-10 text-slate-300" />
               </div>
-              <h3 className="text-lg font-medium text-slate-600">Vault is empty</h3>
-              <p className="text-muted-foreground max-w-xs mx-auto">Upload sensitive documents to protect them with dynamic deception.</p>
+              <h3 className="text-lg font-medium text-slate-600">No Protected Documents</h3>
+              <p className="text-muted-foreground max-w-xs mx-auto">Upload files to protect them with structure-preserving deception.</p>
             </div>
           )}
 

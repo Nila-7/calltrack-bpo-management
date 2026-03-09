@@ -4,37 +4,76 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, User, ShieldCheck, Lock, Loader2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Shield, User, ShieldCheck, Lock, Loader2, KeyRound } from "lucide-react"
 import { useAuth, useFirestore } from "@/firebase"
-import { signInAnonymously } from "firebase/auth"
-import { logActivity } from "@/services/activityLogger"
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"
+import { logActivity, trackSession } from "@/services/activityLogger"
+import { useToast } from "@/hooks/use-toast"
+import { doc, setDoc } from "firebase/firestore"
 
 export default function LoginPage() {
   const router = useRouter()
   const auth = useAuth()
   const db = useFirestore()
-  const [loading, setLoading] = useState<string | null>(null)
+  const { toast } = useToast()
+  
+  const [loading, setLoading] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loginType, setLoginType] = useState<'user' | 'admin'>('user')
 
-  const handleUserLogin = async () => {
-    setLoading('user')
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
     try {
-      const userCredential = await signInAnonymously(auth)
-      // Log authentication event
-      logActivity(db, {
+      let userCredential;
+      if (isSignUp) {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password)
+        // Set user profile with role
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          email,
+          role: loginType === 'admin' ? 'Admin' : 'User',
+          createdAt: new Date().toISOString()
+        })
+      } else {
+        userCredential = await signInWithEmailAndPassword(auth, email, password)
+      }
+
+      // Track active session
+      await trackSession(db, {
         userId: userCredential.user.uid,
-        userEmail: 'Anonymous User',
-        action: 'User authenticated',
+        email: email,
+        role: loginType,
+        isActive: true
+      })
+
+      // Log authentication event
+      await logActivity(db, {
+        userId: userCredential.user.uid,
+        userEmail: email,
+        role: loginType,
+        action: loginType === 'admin' ? 'Admin Login' : 'User Login',
         status: 'Success'
       })
-      router.push('/user/dashboard')
-    } catch (error) {
-      console.error("Login failed", error)
-      setLoading(null)
-    }
-  }
 
-  const handleAdminLoginRedirect = () => {
-    router.push('/admin/login')
+      toast({
+        title: isSignUp ? "Account Created" : "Authentication Successful",
+        description: `Welcome to IntelliSecureX, ${email}.`,
+      })
+      
+      router.push(loginType === 'admin' ? '/admin/dashboard' : '/user/dashboard')
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Failed",
+        description: error.message,
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -53,51 +92,70 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-3xl font-bold tracking-tight text-secondary">IntelliSecureX</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Document Protection via Cyber-Deception
+            Identity-Aware Document Deception Engine
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 pt-4">
-          <div className="space-y-4">
+        
+        <CardContent className="pt-4">
+          <div className="grid grid-cols-2 gap-2 mb-6 p-1 bg-slate-100 rounded-lg">
             <Button 
-              className="w-full h-14 text-lg font-medium group transition-all"
-              variant="default"
-              onClick={handleAdminLoginRedirect}
-              disabled={loading !== null}
+              variant={loginType === 'user' ? 'default' : 'ghost'} 
+              size="sm"
+              onClick={() => setLoginType('user')}
+              className="text-xs"
             >
-              <ShieldCheck className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-              Login as Administrator
+              <User className="w-3 h-3 mr-1" /> User Portal
             </Button>
-            
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-muted" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or</span>
-              </div>
-            </div>
-
             <Button 
-              className="w-full h-14 text-lg font-medium group transition-all"
-              variant="outline"
-              onClick={handleUserLogin}
-              disabled={loading !== null}
+              variant={loginType === 'admin' ? 'default' : 'ghost'} 
+              size="sm"
+              onClick={() => setLoginType('admin')}
+              className="text-xs"
             >
-              {loading === 'user' ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  <User className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                  Login as User
-                </>
-              )}
+              <ShieldCheck className="w-3 h-3 mr-1" /> Admin Console
             </Button>
           </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="name@example.com" 
+                required 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <Button className="w-full h-12 text-lg font-medium" disabled={loading}>
+              {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <KeyRound className="w-5 h-5 mr-2" />}
+              {isSignUp ? "Create Account" : "Sign In"}
+            </Button>
+          </form>
         </CardContent>
+
         <CardFooter className="flex flex-col space-y-4 text-center">
-          <div className="flex items-center justify-center text-sm text-muted-foreground">
-            <Lock className="w-4 h-4 mr-1 text-primary" />
-            Rule-based Protection Engine Active
+          <Button 
+            variant="link" 
+            className="text-sm text-primary" 
+            onClick={() => setIsSignUp(!isSignUp)}
+          >
+            {isSignUp ? "Already have an account? Sign In" : "Need an account? Sign Up Now"}
+          </Button>
+          <div className="flex items-center justify-center text-xs text-muted-foreground uppercase tracking-widest font-bold">
+            <Lock className="w-3 h-3 mr-1 text-primary" />
+            Secure Session Active
           </div>
         </CardFooter>
       </Card>

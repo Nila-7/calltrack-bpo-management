@@ -3,120 +3,58 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * CORE PHILOSOPHY:
-     * This ruleset implements a robust, multi-layered security model for the IntelliSecureX deception platform.
-     * It prioritizes strict data isolation through path-based ownership and role-based administrative access.
-     *
-     * DATA STRUCTURE:
-     * 1. User-Specific Data: Documents and sensitive entity detections are nested under `/users/{userId}/...`
-     *    to ensure clear ownership boundaries and performant path-based authorization.
-     * 2. Global Audit Collections: `activity_logs` and `sessions` are top-level collections where access
-     *    is controlled by verifying the `userId` field within each document against the authenticated user's UID.
-     *
-     * KEY SECURITY DECISIONS:
-     * - Ownership-First: Primary access is granted based on the {userId} in the document path.
-     * - Admin Oversight: Users with the 'Admin' role in their user profile have global read/write privileges
-     *   for monitoring and system management.
-     * - Immutability: Activity logs are generally treated as immutable once created to preserve audit integrity.
-     * - Denormalization: The `userId` is stored directly on global collection documents (logs, sessions) to 
-     *   allow for fast, single-document authorization checks without expensive joins.
+     * INTELLISYNCEX SECURITY POSTURE:
+     * 1. Path-based isolation for user document workspaces.
+     * 2. Identity-mapped global audit trails (activity_logs).
+     * 3. Role-based administrative override.
      */
 
-    // --- Helper Functions ---
-
-    /** @description Checks if the request is from an authenticated user. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** @description Checks if the authenticated user's UID matches the provided userId. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** @description Checks if the existing document is owned by the authenticated user. */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    /** @description Checks if the user has the 'Admin' role. Performs a single document lookup on the user's own profile. */
     function isAdmin() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    /** @description Validates that the userId field in the request data matches the target owner. */
     function isValidOwnershipField(userId) {
       return request.resource.data.userId == userId;
     }
 
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for the User collection. Supports self-registration and admin-led user management.
-     * @path /users/{userId}
-     * @allow (create) if the user is registering themselves or is an admin.
-     * @deny (list) if the requester is not an admin.
-     * @principle Validates identity and restricts user listing to administrators.
-     */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      allow get, update: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
-      allow create: if isOwner(userId) || isAdmin();
-      allow update: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn(); // Allow initial self-registration or admin provision
       allow delete: if isAdmin();
     }
 
-    /**
-     * @description Rules for User Documents. Enforces strict path-based ownership for the deceptive document workspace.
-     * @path /users/{userId}/documents/{documentId}
-     * @allow (create) if the owner matches the path and the internal userId field is correct.
-     * @deny (update) if the userId field is being modified to point to another user.
-     * @principle Ensures data isolation and relational integrity between path and document content.
-     */
     match /users/{userId}/documents/{documentId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && isValidOwnershipField(userId);
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isExistingOwner(userId) || isAdmin();
+      allow update: if isOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isOwner(userId) || isAdmin();
 
-      /**
-       * @description Rules for Entity Detections. Inherits access from the parent document.
-       * @path /users/{userId}/documents/{documentId}/entity_detections/{detectionId}
-       * @allow (get) if the requester is the document owner or an admin.
-       * @principle Protects sensitive Gemini-processed entity maps via parent path ownership.
-       */
       match /entity_detections/{detectionId} {
-        allow get, list: if isOwner(userId) || isAdmin();
-        allow create, update: if isOwner(userId) || isAdmin();
-        allow delete: if isOwner(userId) || isAdmin();
+        allow get, list, create, update, delete: if isOwner(userId) || isAdmin();
       }
     }
 
-    /**
-     * @description Rules for the Activity Logs collection. Used for real-time admin monitoring and user-specific audit trails.
-     * @path /activity_logs/{activityLogId}
-     * @allow (create) if the user is authenticated (system or user logs).
-     * @deny (update) to ensure log integrity.
-     * @principle Combines global admin access with filtered owner-access for audit logs.
-     */
     match /activity_logs/{activityLogId} {
-      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      // Admins see all logs. Users see their own identity-mapped logs.
+      allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if isSignedIn();
-      allow update: if false;
+      allow update: if false; // Audit integrity
       allow delete: if isAdmin();
     }
 
-    /**
-     * @description Rules for Session tracking. Monitors active sessions for the admin dashboard.
-     * @path /sessions/{sessionId}
-     * @allow (create) if the user is authenticated and the session is correctly mapped to their UID.
-     * @principle Restricts session visibility to the owner or administrators for live activity tracking.
-     */
     match /sessions/{sessionId} {
       allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create: if isSignedIn() && isValidOwnershipField(request.auth.uid);
-      allow update: if (resource != null && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isSignedIn();
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow delete: if isAdmin();
     }
   }
