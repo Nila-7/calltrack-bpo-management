@@ -15,6 +15,7 @@ export type SystemAction =
   | 'Document Deleted'
   | 'Document Viewed'
   | 'Decoy Activated'
+  | 'Decoy Served'
   | 'Simulated Breach Triggered'
   | 'Unauthorized Access Attempt'
   | 'System Alert Triggered'

@@ -7,14 +7,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
   ChevronLeft, 
-  ShieldCheck, 
   ShieldAlert, 
-  AlertTriangle,
   FileText,
   Lock,
-  Unlock,
-  Loader2,
-  Activity
+  Loader2
 } from "lucide-react"
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from "@/firebase"
 import { logActivity } from "@/services/activityLogger"
@@ -74,7 +70,7 @@ export default function DocumentViewer() {
       username: profile.username || 'N/A',
       email: user.email || 'N/A',
       role: profile.role.toLowerCase() as 'admin' | 'user',
-      action: 'Simulated Breach Triggered',
+      action: 'Decoy Served',
       documentId: id,
       documentName: document.fileName,
       status: 'Alert',
@@ -83,8 +79,8 @@ export default function DocumentViewer() {
 
     toast({
       variant: "destructive",
-      title: "⚠ DECEPTION SHIELD ACTIVATED",
-      description: "Suspicious access profile detected. Decoy document served.",
+      title: "⚠ SECURITY ALERT",
+      description: "Deception triggered. Serving decoy document.",
     })
   }
 
@@ -109,129 +105,75 @@ export default function DocumentViewer() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="h-16 border-b bg-white flex items-center justify-between px-8 shrink-0">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+    <div className="min-h-screen bg-slate-200 flex flex-col font-sans">
+      {/* Top Bar */}
+      <header className="h-16 border-b bg-white flex items-center justify-between px-8 shrink-0 shadow-sm z-30">
+        <div className="flex items-center space-x-6">
+          <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-slate-600 font-medium">
             <ChevronLeft className="w-4 h-4 mr-1" /> Exit Viewer
           </Button>
-          <div className="h-6 w-px bg-slate-200" />
           <div className="flex items-center space-x-2">
             <FileText className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold text-secondary">{document.fileName}</h2>
-            <Badge variant="outline" className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Active Protection</Badge>
+            <h2 className="font-bold text-slate-800 tracking-tight">{document.fileName}</h2>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div>
           <Button 
-            variant={suspiciousMode ? "destructive" : "outline"} 
+            variant={suspiciousMode ? "destructive" : "default"} 
             size="sm" 
             onClick={simulateBreach}
             disabled={suspiciousMode}
-            className="font-black uppercase text-[10px] tracking-widest h-10 px-6"
+            className="font-bold uppercase text-[11px] tracking-widest h-10 px-6 shadow-lg shadow-primary/20"
           >
-            <ShieldAlert className="w-4 h-4 mr-2" /> Simulate Breach
+            <ShieldAlert className="w-4 h-4 mr-2" /> {suspiciousMode ? "Breach Logged" : "Simulate Breach"}
           </Button>
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel: Document Content */}
-        <div className="flex-1 p-8 overflow-auto flex flex-col items-center bg-slate-100">
-          <div className="w-full max-w-3xl mb-4 flex justify-center">
-            {viewMode === 'decoy' && (
-              <Badge className="bg-red-600 text-white border-none px-6 py-2 font-black text-xs uppercase tracking-[0.2em] animate-pulse shadow-lg">
-                <AlertTriangle className="w-4 h-4 mr-2" /> Deception Mode Activated
-              </Badge>
-            )}
+      {/* Main Content: Centered PDF-Style Document */}
+      <div className="flex-1 overflow-auto flex flex-col items-center py-12 px-4">
+        {/* Label Indicator Above Document */}
+        <div className="w-full max-w-[850px] mb-4 flex justify-start">
+          <div className={`flex items-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+            viewMode === 'original' 
+              ? 'bg-slate-100 text-slate-600 border-slate-200' 
+              : 'bg-red-50 text-red-600 border-red-200 animate-pulse'
+          }`}>
+            <Lock className="w-3 h-3 mr-2" />
+            {viewMode === 'original' ? 'Original Data' : 'Decoy Data'}
           </div>
-          
-          <Card className="w-full max-w-3xl border-none shadow-2xl bg-white rounded-lg relative overflow-hidden">
-            {viewMode === 'decoy' && (
-              <div className="absolute top-0 left-0 w-full h-1 bg-red-600 animate-pulse" />
-            )}
-            <CardContent className="p-12 font-mono text-sm leading-relaxed whitespace-pre-wrap select-none">
-              <div className="mb-8 flex justify-between border-b border-slate-100 pb-4">
-                <div className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-bold">Identity-Mapped Stream</div>
-                {viewMode === 'decoy' ? (
-                  <div className="flex items-center text-red-600 font-black text-[10px] uppercase tracking-widest">
-                    <Lock className="w-3 h-3 mr-1" /> Decoy Version
-                  </div>
-                ) : (
-                  <div className="flex items-center text-slate-400 font-bold text-[10px] uppercase tracking-widest">
-                    <Unlock className="w-3 h-3 mr-1" /> Original Data
-                  </div>
-                )}
-              </div>
-              <div className="bg-slate-50/50 p-8 border border-slate-100 rounded-sm">
-                {viewMode === 'original' ? document.content : decoyContent}
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Right Panel: Security Controls */}
-        <aside className="w-[350px] bg-white border-l p-6 overflow-auto space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Security Protocols</h3>
-            
-            {/* Original Document Indicator */}
-            <Card className={`border-2 transition-all ${viewMode === 'original' ? 'border-primary bg-primary/5' : 'border-slate-50 opacity-40'}`}>
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${viewMode === 'original' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-400'}`}>
-                    <Unlock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-black uppercase tracking-wider">Original Document</div>
-                    <div className="text-[10px] text-slate-500">Unmodified data stream</div>
-                  </div>
-                </div>
-                {viewMode === 'original' && <ShieldCheck className="w-4 h-4 text-primary" />}
-              </CardContent>
-            </Card>
-
-            {/* Decoy Mode Indicator */}
-            <Card className={`border-2 transition-all ${viewMode === 'decoy' ? 'border-red-600 bg-red-50' : 'border-slate-50 opacity-40'}`}>
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${viewMode === 'decoy' ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-black uppercase tracking-wider">Decoy Document</div>
-                    <div className="text-[10px] text-slate-500">Active deceptive PII served</div>
-                  </div>
-                </div>
-                {viewMode === 'decoy' && <ShieldAlert className="w-4 h-4 text-red-600 animate-pulse" />}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="h-px bg-slate-100" />
-
-          <div className="bg-slate-50 p-6 rounded-xl border border-dashed border-slate-200 text-center space-y-3">
-            <Activity className="w-8 h-8 text-slate-300 mx-auto" />
-            <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-500">Telemetry Monitoring</h4>
-            <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-              The IntelliSecureX engine is monitoring this session for unauthorized patterns. Decoy serving is triggered by behavioral anomalies.
-            </p>
-          </div>
-
-          {suspiciousMode && (
-            <div className="p-4 bg-red-600/10 border border-red-600/20 rounded-lg space-y-2">
-              <div className="flex items-center text-red-600 font-black text-[10px] uppercase tracking-tighter">
-                <AlertTriangle className="w-3 h-3 mr-2" /> Alert Logged to Admin
+        {/* PDF Page Container */}
+        <Card className="w-full max-w-[850px] min-h-[1100px] border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white rounded-none relative">
+          <CardContent className="p-20 font-mono text-sm leading-[1.8] whitespace-pre-wrap select-none text-slate-800">
+            {/* Document Header Mockup */}
+            <div className="mb-12 border-b border-slate-100 pb-8 flex justify-between items-end">
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 uppercase tracking-tighter">Internal Record</h1>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Classification: Confidential / PII</p>
               </div>
-              <p className="text-[9px] text-red-800/70 font-medium">
-                Identity: {profile?.username}<br/>
-                Action: Breach Simulation<br/>
-                Status: DECEPTION_ACTIVE
-              </p>
+              <div className="text-[10px] text-right text-slate-400 font-mono uppercase">
+                System ID: {id.toString().substring(0, 8).toUpperCase()}<br/>
+                Printed: {new Date().toLocaleDateString()}
+              </div>
             </div>
-          )}
-        </aside>
+
+            {/* Document Content Area */}
+            <div className="relative">
+              {viewMode === 'original' ? document.content : decoyContent}
+            </div>
+
+            {/* Document Footer Mockup */}
+            <div className="mt-24 border-t border-slate-100 pt-8 text-[9px] text-slate-300 font-mono text-center uppercase tracking-widest">
+              End of Document - Generated by IntelliSecureX Protection Engine
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Padding Bottom for scroll */}
+        <div className="h-12" />
       </div>
     </div>
   )

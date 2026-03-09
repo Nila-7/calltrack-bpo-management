@@ -11,7 +11,8 @@ const DECOY_TEMPLATES: Record<string, string> = {
 };
 
 const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
-  EMPLOYEE_ID: (original) => original.replace('EMP', 'EXP'),
+  // Requirement: Employee ID must remain identical in both documents
+  EMPLOYEE_ID: (original) => original,
   PERSON_NAME: (original) => DECOY_TEMPLATES[original] || 'Rohit Srivastava',
   DATE_OF_BIRTH: (original) => {
     // Basic realistic DOB shift
@@ -47,15 +48,17 @@ export function generateDecoyDocument(text: string, entities: DetectedEntity[]):
       const decoy = generateDecoyValue(entity);
       // Preserve key and colon, replace only value
       const colonIndex = line.indexOf(':');
-      const keyPart = line.substring(0, colonIndex + 1);
-      const originalValuePart = line.substring(colonIndex + 1);
-      
-      // Preserve original leading/trailing whitespace around the value if any
-      const match = originalValuePart.match(/^(\s*)(.*?)(\s*)$/);
-      const leadingSpace = match?.[1] || ' ';
-      const trailingSpace = match?.[3] || '';
-      
-      return `${keyPart}${leadingSpace}${decoy}${trailingSpace}`;
+      if (colonIndex !== -1) {
+        const keyPart = line.substring(0, colonIndex + 1);
+        const originalValuePart = line.substring(colonIndex + 1);
+        
+        // Preserve original leading/trailing whitespace around the value if any
+        const match = originalValuePart.match(/^(\s*)(.*?)(\s*)$/);
+        const leadingSpace = match?.[1] || ' ';
+        const trailingSpace = match?.[3] || '';
+        
+        return `${keyPart}${leadingSpace}${decoy}${trailingSpace}`;
+      }
     }
     return line;
   });
