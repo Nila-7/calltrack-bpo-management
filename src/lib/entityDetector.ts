@@ -61,7 +61,7 @@ export function detectEntities(text: string): DetectedEntity[] {
   lines.forEach((line, index) => {
     // Detect multi-line address headers
     if (line.trim() === 'Registered Address' || line.startsWith('Address:')) {
-      addressLinesRemaining = 3; // Capture next 3 lines as address lines
+      addressLinesRemaining = 4; // Capture next few lines as address lines
       if (!line.includes(':')) return; // Just a heading line, skip entity creation for it
     }
 

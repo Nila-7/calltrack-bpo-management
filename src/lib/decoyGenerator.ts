@@ -10,8 +10,7 @@ const DECOY_TEMPLATES: Record<string, string> = {
 };
 
 const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
-  // CRITICAL: Employee ID must remain identical. Since it's excluded from detection, 
-  // this is a safety fallback.
+  // CRITICAL: Employee ID must remain identical.
   EMPLOYEE_ID: (original) => original,
   
   PERSON_NAME: (original) => DECOY_TEMPLATES[original] || 'Rohit Srivastava',
@@ -23,10 +22,8 @@ const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
   
   PAN_NUMBER: (original) => {
     if (original === 'BQTPS9172M') return 'ABTPS7421L';
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const randomLetters = (len: number) => Array.from({length: len}, () => letters[Math.floor(Math.random() * letters.length)]).join('');
-    const randomDigits = (len: number) => Array.from({length: len}, () => Math.floor(Math.random() * 10)).join('');
-    return `${randomLetters(5)}${randomDigits(4)}${randomLetters(1)}`;
+    // Pattern: AAAAA9999A
+    return 'ABTPS' + Math.floor(1000 + Math.random() * 8999) + 'L';
   },
   
   AADHAAR_NUMBER: (original) => {
@@ -51,7 +48,6 @@ const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
   
   BANK_ACCOUNT: (original) => {
     if (original === '50200087349122') return '00980100456123';
-    if (original === 'HDFC Bank') return 'ICICI Bank';
     if (original.length > 10) return '00980100456123';
     return original;
   },
@@ -59,7 +55,8 @@ const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
   ADDRESS: (original) => {
     if (original.includes('Velachery')) return 'Sector 62, Noida – 201309';
     if (original.includes('Chennai')) return 'Uttar Pradesh, India';
-    if (original.includes('Cross Street')) return 'Flat 21B, Lakeview Apartments';
+    if (original.includes('No. 42')) return 'Flat 21B, Lakeview Apartments';
+    if (original.includes('Tamil Nadu')) return 'Uttar Pradesh, India';
     return 'Flat 21B, Lakeview Apartments, Sector 62, Noida';
   },
   
