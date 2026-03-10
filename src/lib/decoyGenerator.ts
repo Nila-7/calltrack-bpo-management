@@ -7,11 +7,11 @@ const DECOY_TEMPLATES: Record<string, string> = {
   'ICICI Bank': 'Axis Bank',
   'Level-3': 'Level-2',
   'Level-2': 'Level-1',
-  'Level-1': 'Level-0',
 };
 
 const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
-  // CRITICAL: Employee ID must remain identical in both documents
+  // CRITICAL: Employee ID must remain identical. Since it's excluded from detection, 
+  // this is a safety fallback.
   EMPLOYEE_ID: (original) => original,
   
   PERSON_NAME: (original) => DECOY_TEMPLATES[original] || 'Rohit Srivastava',
@@ -22,38 +22,51 @@ const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
   },
   
   PAN_NUMBER: (original) => {
-    // Pattern: 5 letters, 4 digits, 1 letter (AAAAA9999A)
+    if (original === 'BQTPS9172M') return 'ABTPS7421L';
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const randomLetters = (len: number) => Array.from({length: len}, () => letters[Math.floor(Math.random() * letters.length)]).join('');
     const randomDigits = (len: number) => Array.from({length: len}, () => Math.floor(Math.random() * 10)).join('');
-    
-    let decoy = `${randomLetters(5)}${randomDigits(4)}${randomLetters(1)}`;
-    // Ensure it's different from original
-    while (decoy === original) {
-      decoy = `${randomLetters(5)}${randomDigits(4)}${randomLetters(1)}`;
-    }
-    return decoy;
+    return `${randomLetters(5)}${randomDigits(4)}${randomLetters(1)}`;
   },
   
   AADHAAR_NUMBER: (original) => {
     if (original === '4512 9087 3342') return '4781 5564 2109';
-    return '4781 5564 ' + Math.floor(1000 + Math.random() * 8999 + 1000);
+    return '4781 5564 ' + Math.floor(1000 + Math.random() * 8999);
   },
   
-  EMAIL: () => 'decoy.' + Math.random().toString(36).substring(7) + '@secure-mail.com',
+  EMAIL: (original) => {
+    if (original.includes('rahul.srinivasan')) return original.replace('rahul.srinivasan', 'rohit.srivastava');
+    return 'rohit.srivastava@oriontech.in';
+  },
   
-  PHONE: () => '+91 9988776655',
+  PHONE: (original) => {
+    if (original.includes('98451 22376')) return '+91 97162 88413';
+    return '+91 97162 88413';
+  },
   
-  IFSC_CODE: () => 'ICIC0000981',
+  IFSC_CODE: (original) => {
+    if (original === 'HDFC0001426') return 'ICIC0000981';
+    return 'ICIC0000981';
+  },
   
-  BANK_ACCOUNT: () => '00980100456' + Math.floor(100 + Math.random() * 899),
+  BANK_ACCOUNT: (original) => {
+    if (original === '50200087349122') return '00980100456123';
+    if (original === 'HDFC Bank') return 'ICICI Bank';
+    if (original.length > 10) return '00980100456123';
+    return original;
+  },
   
-  ADDRESS: (original) => DECOY_TEMPLATES[original] || 'Pune, Maharashtra, India',
+  ADDRESS: (original) => {
+    if (original.includes('Velachery')) return 'Sector 62, Noida – 201309';
+    if (original.includes('Chennai')) return 'Uttar Pradesh, India';
+    if (original.includes('Cross Street')) return 'Flat 21B, Lakeview Apartments';
+    return 'Flat 21B, Lakeview Apartments, Sector 62, Noida';
+  },
   
   ACCESS_LEVEL: (original) => {
     if (original.includes('Level-3')) return original.replace('Level-3', 'Level-2');
     if (original.includes('Level-2')) return original.replace('Level-2', 'Level-1');
-    return 'Level-0 Infrastructure';
+    return 'Level-0 Restricted';
   },
 };
 
@@ -73,16 +86,21 @@ export function generateDecoyDocument(text: string, entities: DetectedEntity[]):
       
       const colonIndex = line.indexOf(':');
       if (colonIndex !== -1) {
-        // Label remains unchanged
+        // Handle Key: Value structure
         const keyPart = line.substring(0, colonIndex + 1);
         const originalValuePart = line.substring(colonIndex + 1);
         
-        // Preserve spacing
         const match = originalValuePart.match(/^(\s*)(.*?)(\s*)$/);
         const leadingSpace = match?.[1] || ' ';
         const trailingSpace = match?.[3] || '';
         
         return `${keyPart}${leadingSpace}${decoy}${trailingSpace}`;
+      } else {
+        // Handle multi-line structures without colons (e.g. Address lines)
+        const match = line.match(/^(\s*)(.*?)(\s*)$/);
+        const leadingSpace = match?.[1] || '';
+        const trailingSpace = match?.[3] || '';
+        return `${leadingSpace}${decoy}${trailingSpace}`;
       }
     }
     return line;

@@ -32,7 +32,9 @@ const KEY_MAP: Record<string, EntityType> = {
   'Aadhaar Number': 'AADHAAR_NUMBER',
   'Aadhaar': 'AADHAAR_NUMBER',
   'Address': 'ADDRESS',
+  'Corporate Email': 'EMAIL',
   'Email': 'EMAIL',
+  'Contact Number': 'PHONE',
   'Phone Number': 'PHONE',
   'Phone': 'PHONE',
   'Bank Name': 'BANK_ACCOUNT',
@@ -48,10 +50,21 @@ export function detectEntities(text: string): DetectedEntity[] {
   const lines = text.split('\n');
   const results: DetectedEntity[] = [];
   
-  // PAN Pattern: 5 letters, 4 digits, 1 letter
-  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  // Pattern-based detection regex
+  const panRegex = /[A-Z]{5}[0-9]{4}[A-Z]{1}/;
+  const aadhaarRegex = /\d{4}\s\d{4}\s\d{4}/;
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  const phoneRegex = /\+91\s\d{5}\s\d{5}/;
+
+  let addressLinesRemaining = 0;
 
   lines.forEach((line, index) => {
+    // Detect multi-line address headers
+    if (line.trim() === 'Registered Address' || line.startsWith('Address:')) {
+      addressLinesRemaining = 3; // Capture next 3 lines as address lines
+      if (!line.includes(':')) return; // Just a heading line, skip entity creation for it
+    }
+
     if (line.includes(':')) {
       const colonIndex = line.indexOf(':');
       const key = line.substring(0, colonIndex).trim();
@@ -59,9 +72,17 @@ export function detectEntities(text: string): DetectedEntity[] {
 
       let entityType = KEY_MAP[key];
 
-      // Fallback: Detection based on pattern if label doesn't directly match
-      if (!entityType && panRegex.test(value)) {
-        entityType = 'PAN_NUMBER';
+      // Fallback: Pattern-based detection if label doesn't match
+      if (!entityType) {
+        if (panRegex.test(value)) entityType = 'PAN_NUMBER';
+        else if (aadhaarRegex.test(value)) entityType = 'AADHAAR_NUMBER';
+        else if (emailRegex.test(value)) entityType = 'EMAIL';
+        else if (phoneRegex.test(value)) entityType = 'PHONE';
+      }
+
+      // CRITICAL: Employee ID must never be added to detection results for replacement
+      if (entityType === 'EMPLOYEE_ID' || key.toLowerCase().includes('employee id')) {
+        return;
       }
 
       if (entityType) {
@@ -69,11 +90,25 @@ export function detectEntities(text: string): DetectedEntity[] {
           entityType: entityType,
           key: key,
           originalValue: value,
-          decoyValue: '', // Will be filled by generator
+          decoyValue: '', // Filled later
           confidence: 1.0,
           lineIndex: index,
         });
+        return;
       }
+    }
+
+    // Handle address lines without colons following a Registered Address heading
+    if (addressLinesRemaining > 0 && line.trim().length > 0 && !line.includes(':')) {
+      results.push({
+        entityType: 'ADDRESS',
+        key: 'Address Component',
+        originalValue: line.trim(),
+        decoyValue: '',
+        confidence: 0.8,
+        lineIndex: index,
+      });
+      addressLinesRemaining--;
     }
   });
 
