@@ -5,6 +5,7 @@ const DECOY_TEMPLATES: Record<string, string> = {
   'John Doe': 'James Miller',
   'HDFC Bank': 'ICICI Bank',
   'ICICI Bank': 'Axis Bank',
+  'Axis Bank': 'HDFC Bank',
   'Level-3': 'Level-2',
   'Level-2': 'Level-1',
 };
@@ -21,9 +22,12 @@ const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
   },
   
   PAN_NUMBER: (original) => {
-    if (original === 'BQTPS9172M') return 'ABTPS7421L';
     // Pattern: AAAAA9999A
-    return 'ABTPS' + Math.floor(1000 + Math.random() * 8999) + 'L';
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const randomLetters = (len: number) => Array.from({length: len}, () => letters[Math.floor(Math.random() * letters.length)]).join('');
+    const randomDigits = (len: number) => Array.from({length: len}, () => Math.floor(Math.random() * 10)).join('');
+    
+    return `${randomLetters(5)}${randomDigits(4)}${randomLetters(1)}`;
   },
   
   AADHAAR_NUMBER: (original) => {
@@ -47,9 +51,22 @@ const FAKE_GENERATORS: Record<EntityType, (original: string) => string> = {
   },
   
   BANK_ACCOUNT: (original) => {
-    if (original === '50200087349122') return '00980100456123';
-    if (original.length > 10) return '00980100456123';
-    return original;
+    // Check templates first for bank names
+    if (DECOY_TEMPLATES[original]) return DECOY_TEMPLATES[original];
+    
+    // Distinguish between bank names and account numbers
+    const cleanOriginal = original.trim();
+    const isNumeric = /^\d+$/.test(cleanOriginal.replace(/\s/g, ''));
+    
+    if (isNumeric) {
+      // It's likely an account number
+      return '00980100456123';
+    } else {
+      // It's likely a bank name
+      if (cleanOriginal.toLowerCase().includes('hdfc')) return 'ICICI Bank';
+      if (cleanOriginal.toLowerCase().includes('icici')) return 'Axis Bank';
+      return 'Axis Bank';
+    }
   },
   
   ADDRESS: (original) => {
