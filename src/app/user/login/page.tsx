@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -25,7 +24,7 @@ export default function UserLoginPage() {
     e.preventDefault()
     setLoading(true)
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      await signInWithEmailAndPassword(auth, email, password)
       
       toast({
         title: "Access Granted",
@@ -98,8 +97,8 @@ export default function UserLoginPage() {
               {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <KeyRound className="w-5 h-5 mr-2" />}
               Sign In to Terminal
             </Button>
-          </form>
-        </CardContent>
+          </CardContent>
+        </form>
         <CardFooter className="flex flex-col space-y-4 text-center border-t bg-slate-50/50 pt-6">
           <Button variant="link" className="text-sm font-medium text-slate-600" onClick={() => router.push('/user/signup')}>
             Don't have an account? <span className="text-primary ml-1">Create Agent ID</span>

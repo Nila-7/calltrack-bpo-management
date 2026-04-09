@@ -1,10 +1,9 @@
-
 "use client"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/Card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ShieldCheck, Lock, Loader2, Mail, ChevronLeft } from "lucide-react"
@@ -56,7 +55,7 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-2xl border-none ring-1 ring-slate-200">
-        <CardHeader className="text-center space-y-2">
+        <CardHeader className="text-center space-y-2 pb-8">
           <Button variant="ghost" size="sm" className="w-fit mb-2" onClick={() => router.push('/user/login')}>
             <ChevronLeft className="w-4 h-4 mr-1" /> Agent Login
           </Button>
