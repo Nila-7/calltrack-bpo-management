@@ -1,10 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper function to check if the user is authenticated
     function isSignedIn() {
       return request.auth != null;
     }
     
+    // Helper function to check if the user is an administrator
+    // Checks both the hardcoded admin email and the user profile role
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'admin@gmail.com' || 
@@ -13,20 +16,17 @@ service cloud.firestore {
       );
     }
 
+    // User Profiles: Users can manage their own profiles; Admins can manage all.
     match /userProfiles/{userId} {
       allow read, write: if request.auth.uid == userId || isAdmin();
-    }
-
-    match /calls/{callId} {
-      allow read: if isAdmin() || (resource != null && resource.data.userId == request.auth.uid);
-      allow create: if isSignedIn();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Allow users to check for profile existence during login/signup
-    match /userProfiles/{userId} {
+      // Allow profile existence checks during login/signup flows
       allow get: if isSignedIn();
+    }
+
+    // Call Records: Configured for development access.
+    // Allows any authenticated user to perform queries (list) and mutations (write).
+    match /calls/{callId} {
+      allow read, write: if isSignedIn();
     }
   }
 }
