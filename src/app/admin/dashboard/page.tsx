@@ -16,7 +16,7 @@ import {
   Activity,
   PhoneCall
 } from "lucide-react"
-import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
+import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from "@/firebase"
 import { signOut } from "firebase/auth"
 import { collection, doc, updateDoc, query, orderBy, limit } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
@@ -28,15 +28,28 @@ export default function AdminDashboard() {
   const { user, isUserLoading } = useUser()
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (!isUserLoading && (!user || user.email !== 'admin@gmail.com')) {
-      router.push('/')
-    }
-  }, [user, isUserLoading, router])
+  // Fetch profile to verify admin role more robustly
+  const profileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'userProfiles', user.uid);
+  }, [db, user]);
+  const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
 
-  const allCallsQuery = useMemoFirebase(() => 
-    query(collection(db, 'calls'), orderBy('createdAt', 'desc'), limit(100))
-  , [db])
+  const isAdmin = user?.email === 'admin@gmail.com' || profile?.role === 'Admin';
+
+  useEffect(() => {
+    if (!isUserLoading && !profileLoading) {
+      if (!user || !isAdmin) {
+        router.push('/')
+      }
+    }
+  }, [user, isUserLoading, profileLoading, isAdmin, router])
+
+  // Gate the query so it only runs if the user is authorized
+  const allCallsQuery = useMemoFirebase(() => {
+    if (!user || !isAdmin) return null;
+    return query(collection(db, 'calls'), orderBy('createdAt', 'desc'), limit(100));
+  }, [db, user, isAdmin])
 
   const { data: calls, isLoading: callsLoading } = useCollection(allCallsQuery)
 
@@ -45,7 +58,7 @@ export default function AdminDashboard() {
       await updateDoc(doc(db, 'calls', id), { status })
       toast({ title: "Status Updated", description: `Call is now ${status}.` })
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Update Failed", description: err.message })
+      // Errors are handled by the global listener, but we can catch for local UI feedback
     }
   }
 
@@ -58,7 +71,9 @@ export default function AdminDashboard() {
     }
   }
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+  if (isUserLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+
+  if (!isAdmin) return null;
 
   return (
     <div className="min-h-screen bg-slate-50">

@@ -8,7 +8,8 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'admin@gmail.com' || 
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin'
+        (exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin')
       );
     }
 
@@ -21,6 +22,11 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update: if isAdmin();
       allow delete: if isAdmin();
+    }
+
+    // Allow users to check for profile existence during login/signup
+    match /userProfiles/{userId} {
+      allow get: if isSignedIn();
     }
   }
 }
