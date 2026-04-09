@@ -40,9 +40,9 @@ export default function UserDashboard() {
     if (!isUserLoading && !user) router.push('/')
   }, [user, isUserLoading, router])
 
-  // Gate query to ensure user.uid is available AND authenticated before querying
+  // Gate query to ensure user is authenticated and loading state is finished
   const callsQuery = useMemoFirebase(() => {
-    if (!user || !user.uid || isUserLoading) return null
+    if (!user || isUserLoading) return null
     return query(
       collection(db, 'calls'),
       where('userId', '==', user.uid),
@@ -70,7 +70,7 @@ export default function UserDashboard() {
       setAgent("")
       toast({ title: "Call Recorded", description: "The call record has been added to the queue." })
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Failed to Add", description: err.message })
+      // Handled globally
     } finally {
       setSubmitting(false)
     }
@@ -85,7 +85,11 @@ export default function UserDashboard() {
     }
   }
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>
+  if (isUserLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <Loader2 className="animate-spin text-primary w-8 h-8" />
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-slate-50 font-body">

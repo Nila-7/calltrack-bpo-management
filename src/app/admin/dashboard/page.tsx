@@ -35,21 +35,23 @@ export default function AdminDashboard() {
   }, [db, user]);
   const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
 
-  // Robust admin check
+  // Robust admin check - prioritize the explicitly defined admin email
   const isAdmin = user?.email === 'admin@gmail.com' || profile?.role === 'Admin';
 
   useEffect(() => {
     if (!isUserLoading && !profileLoading) {
-      if (!user || !isAdmin) {
+      if (!user) {
         router.push('/')
+      } else if (!isAdmin) {
+        router.push('/user/dashboard')
       }
     }
   }, [user, isUserLoading, profileLoading, isAdmin, router])
 
   // Gate the query so it ONLY runs if the user is authorized AND data is ready
   const allCallsQuery = useMemoFirebase(() => {
-    // Explicitly check for isAdmin and ensured loading states are finished
-    if (!user || !isAdmin || isUserLoading || profileLoading) return null;
+    // Explicitly wait for all loading states and admin verification
+    if (!user || isUserLoading || profileLoading || !isAdmin) return null;
     return query(collection(db, 'calls'), orderBy('createdAt', 'desc'), limit(100));
   }, [db, user, isAdmin, isUserLoading, profileLoading])
 
@@ -60,15 +62,15 @@ export default function AdminDashboard() {
       await updateDoc(doc(db, 'calls', id), { status })
       toast({ title: "Status Updated", description: `Call is now ${status}.` })
     } catch (err: any) {
-      // Errors are handled by the global listener
+      // Permission errors are handled by the global listener
     }
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Waiting': return <Badge variant="outline" className="bg-slate-50 text-slate-500">WAITING</Badge>
-      case 'In Progress': return <Badge variant="default" className="bg-amber-500">IN PROGRESS</Badge>
-      case 'Completed': return <Badge variant="default" className="bg-emerald-500">COMPLETED</Badge>
+      case 'Waiting': return <Badge variant="outline" className="bg-slate-50 text-slate-500 font-bold">WAITING</Badge>
+      case 'In Progress': return <Badge variant="default" className="bg-amber-500 font-bold">IN PROGRESS</Badge>
+      case 'Completed': return <Badge variant="default" className="bg-emerald-500 font-bold">COMPLETED</Badge>
       default: return <Badge variant="outline">{status}</Badge>
     }
   }
@@ -134,7 +136,7 @@ export default function AdminDashboard() {
           <CardContent className="p-0">
             <div className="divide-y divide-slate-100">
               {callsLoading ? (
-                <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" /></div>
+                <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary w-10 h-10" /></div>
               ) : calls?.map((call) => (
                 <div key={call.id} className="p-6 bg-white hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="space-y-1 flex-1">
