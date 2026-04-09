@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useAuth, useUser } from "@/firebase"
@@ -19,8 +20,7 @@ export function Navbar() {
     router.push("/")
   }
 
-  const isAdmin = user?.email === 'admin@gmail.com'
-
+  // Navbar is hidden on auth pages
   if (!user && (pathname === '/user/login' || pathname === '/admin/login' || pathname === '/user/signup')) {
     return null
   }
@@ -37,7 +37,7 @@ export function Navbar() {
             <span className="font-semibold text-xl tracking-tighter text-foreground">CallTrack BPO Management</span>
           </div>
 
-          {/* Center: Segmented Navigation (Roles) */}
+          {/* Center: Segmented Navigation (Access is now open to all authenticated users) */}
           <div className="hidden lg:flex p-1 bg-muted rounded-xl border border-border/50">
             <button 
               onClick={() => router.push('/user/dashboard')}
@@ -73,7 +73,7 @@ export function Navbar() {
               <div className="flex items-center gap-4 border-l pl-4 ml-2">
                 <div className="hidden md:flex flex-col items-end">
                   <span className="text-[10px] font-semibold text-primary uppercase tracking-widest leading-none mb-1">
-                    {isAdmin ? 'System Administrator' : 'Support Agent'}
+                    Demo Access
                   </span>
                 </div>
                 

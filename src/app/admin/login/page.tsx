@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PhoneCall, Lock, Loader2, KeyRound, User as UserIcon, ShieldCheck, AlertCircle } from "lucide-react"
 import { useAuth, useUser } from "@/firebase"
-import { signInWithEmailAndPassword, signOut } from "firebase/auth"
+import { signInWithEmailAndPassword } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ThemeToggle } from "@/components/ThemeToggle"
@@ -26,9 +27,7 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      if (user.email === 'admin@gmail.com') {
-        router.push("/admin/dashboard")
-      }
+      router.push("/admin/dashboard")
     }
   }, [user, isUserLoading, router])
 
@@ -37,41 +36,24 @@ export default function AdminLoginPage() {
     setError(null)
     setLoading(true)
     
-    // 1. Clean the Inputs per requirements
     const normalizedEmail = email.trim().toLowerCase()
     const cleanPassword = password
-    
-    // Auto-fix common typos if detected, but normalizedEmail remains the base
-    let finalEmail = normalizedEmail
-    if (normalizedEmail.includes('admin@gamil.com')) {
-      finalEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
-    }
 
-    // 2. Add Temporary Debug Logging
-    console.log("Attempting login for:", finalEmail)
+    console.log("Attempting login for:", normalizedEmail)
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, finalEmail, cleanPassword)
-      const authenticatedUser = userCredential.user
-
-      if (authenticatedUser.email === 'admin@gmail.com') {
-        toast({
-          title: "Admin Access Granted",
-          description: "Welcome to the Command Center.",
-        })
-        router.push("/admin/dashboard")
-      } else {
-        // Sign out immediately if not the admin email
-        await signOut(auth)
-        setError("Access denied. This portal is strictly for system administrators.")
-      }
+      await signInWithEmailAndPassword(auth, normalizedEmail, cleanPassword)
+      
+      toast({
+        title: "Access Granted",
+        description: "Welcome to the Command Center.",
+      })
+      router.push("/admin/dashboard")
     } catch (err: any) {
-      // 4. Log the Error for exact Firebase code visibility
       console.error("ADMIN_AUTH_FAILURE:", err)
       
-      // 3. Update Error Handling for specific credential failures
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-        setError("Invalid Email or Password. Please check your credentials or reset your password in the Firebase Console.")
+        setError("Invalid Email or Password. Please check your credentials.")
       } else if (err.code === 'auth/invalid-email') {
         setError("The email address provided is not valid.")
       } else {
@@ -110,7 +92,6 @@ export default function AdminLoginPage() {
         </div>
 
         <CardContent className="p-10 pt-8 space-y-8">
-          {/* Portal Toggle */}
           <div className="grid grid-cols-2 p-1.5 bg-muted rounded-2xl gap-2">
             <Button 
               variant="ghost" 
@@ -142,12 +123,12 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-5">
               <div className="space-y-2">
-                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] ml-1">Administrator Email</Label>
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] ml-1">Account Email</Label>
                 <div className="relative">
                   <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     type="email" 
-                    placeholder="admin@gmail.com" 
+                    placeholder="email@example.com" 
                     className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-normal"
                     required 
                     value={email}

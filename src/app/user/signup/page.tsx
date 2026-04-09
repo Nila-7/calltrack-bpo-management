@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -6,12 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PhoneCall, Mail, Lock, Loader2, UserPlus, AlertCircle } from "lucide-react"
+import { PhoneCall, Mail, Lock, Loader2, UserPlus } from "lucide-react"
 import { useAuth, useFirestore, useUser } from "@/firebase"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ThemeToggle } from "@/components/ThemeToggle"
 
 export default function UserSignupPage() {
@@ -34,23 +34,16 @@ export default function UserSignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // 1. Clean the Inputs per requirements
     const normalizedEmail = email.trim().toLowerCase()
     const cleanPassword = password
     
-    let finalEmail = normalizedEmail
-    if (normalizedEmail.includes('admin@gamil.com')) {
-      finalEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
-    }
-
     setLoading(true)
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, cleanPassword)
-      const isAdminEmail = finalEmail === 'admin@gmail.com'
+      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, cleanPassword)
       
       await setDoc(doc(db, 'userProfiles', userCredential.user.uid), {
-        email: finalEmail,
-        role: isAdminEmail ? 'Admin' : 'User',
+        email: normalizedEmail,
+        role: 'User',
         createdAt: new Date().toISOString()
       })
 
@@ -59,12 +52,7 @@ export default function UserSignupPage() {
         description: "Your agent identity has been created.",
       })
       
-      // Redirect based on role immediately
-      if (isAdminEmail) {
-        router.push("/admin/dashboard")
-      } else {
-        router.push("/user/dashboard")
-      }
+      router.push("/user/dashboard")
     } catch (error: any) {
       console.error("SIGNUP_ERROR:", error)
       toast({
@@ -138,15 +126,6 @@ export default function UserSignupPage() {
                 </div>
               </div>
             </div>
-
-            {(email.toLowerCase().includes('admin@gmail.com')) && (
-              <Alert className="bg-primary/5 border-primary/20 rounded-xl">
-                <AlertCircle className="h-4 w-4 text-primary" />
-                <AlertDescription className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-                  System Administrator Profile Detected
-                </AlertDescription>
-              </Alert>
-            )}
 
             <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-semibold uppercase tracking-[0.2em] shadow-lg shadow-primary/20 transition-all" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UserPlus className="w-5 h-5 mr-2" />}

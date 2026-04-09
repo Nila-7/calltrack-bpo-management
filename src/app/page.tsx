@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect } from "react"
@@ -14,11 +15,9 @@ export default function RootRedirect() {
       if (!user) {
         router.push("/user/login")
       } else {
-        if (user.email === 'admin@gmail.com') {
-          router.push("/admin/dashboard")
-        } else {
-          router.push("/user/dashboard")
-        }
+        // Any authenticated user defaults to the user dashboard
+        // They can switch to the admin dashboard via the navbar
+        router.push("/user/dashboard")
       }
     }
   }, [user, isUserLoading, router])

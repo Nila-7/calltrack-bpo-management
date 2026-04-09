@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -32,20 +33,16 @@ export default function AdminDashboard() {
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
 
-  const isAdmin = user?.email === 'admin@gmail.com'
-
   useEffect(() => {
-    if (!isUserLoading) {
-      if (!user || !isAdmin) {
-        router.push("/admin/login")
-      }
+    if (!isUserLoading && !user) {
+      router.push("/admin/login")
     }
-  }, [user, isUserLoading, isAdmin, router])
+  }, [user, isUserLoading, router])
 
   const allCallsQuery = useMemoFirebase(() => {
-    if (!user || !isAdmin) return null;
+    if (!user) return null;
     return query(collection(db, 'callRecords'), limit(500));
-  }, [db, user, isAdmin])
+  }, [db, user])
 
   const { data: calls, isLoading: callsLoading } = useCollection(allCallsQuery)
 
@@ -93,16 +90,18 @@ export default function AdminDashboard() {
     }
   }
 
-  if (isUserLoading || !isAdmin) {
+  if (isUserLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <Loader2 className="animate-spin text-primary w-10 h-10 mx-auto" />
-          <p className="text-muted-foreground font-medium uppercase tracking-[0.2em] text-[10px]">Verifying Administrative Privileges...</p>
+          <p className="text-muted-foreground font-medium uppercase tracking-[0.2em] text-[10px]">Loading Administrative View...</p>
         </div>
       </div>
     )
   }
+
+  if (!user) return null;
 
   return (
     <div className="w-full max-w-[1600px] mx-auto px-6 py-10 transition-all duration-300">
@@ -123,7 +122,6 @@ export default function AdminDashboard() {
       </header>
 
       <div className="space-y-10">
-        {/* KPI Dashboard */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <StatCard title="System Volume" value={stats.total} icon={<BarChart3 className="w-4 h-4" />} color="primary" />
           <StatCard title="Pending Queue" value={stats.pending} icon={<Clock className="h-4 w-4" />} color="slate" />
@@ -131,7 +129,6 @@ export default function AdminDashboard() {
           <StatCard title="Total Archived" value={stats.closed} icon={<CheckCircle2 className="h-4 w-4" />} color="emerald" />
         </div>
 
-        {/* Filters Module */}
         <div className="bg-card p-6 rounded-2xl shadow-xl shadow-black/5 border border-border flex flex-col lg:flex-row gap-6 items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -158,14 +155,12 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Global Record Feed */}
         <Card className="border-none shadow-2xl shadow-black/10 overflow-hidden ring-1 ring-border bg-card">
           <CardHeader className="bg-muted/5 border-b px-8 py-6 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-lg font-semibold uppercase tracking-tight">Enterprise Record Stream</CardTitle>
               <CardDescription className="text-xs text-muted-foreground font-normal">Real-time synchronization of all agent activities</CardDescription>
             </div>
-            <Badge variant="secondary" className="px-4 py-1.5 font-medium text-[9px] tracking-widest bg-primary/10 text-primary border border-primary/20 uppercase">Audit Mode: Full Access</Badge>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border">
