@@ -83,8 +83,8 @@ export default function AdminLoginPage() {
             </div>
           </div>
           <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-foreground">CallTrack</h1>
-            <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Smart BPO Call Management System</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">CallTrack</h1>
+            <p className="text-muted-foreground text-sm font-normal uppercase tracking-widest">Smart BPO Call Management System</p>
           </div>
         </div>
 
@@ -93,7 +93,7 @@ export default function AdminLoginPage() {
           <div className="grid grid-cols-2 p-1 bg-muted rounded-xl gap-1">
             <Button 
               variant="ghost" 
-              className="rounded-lg font-bold text-xs text-muted-foreground hover:text-foreground h-10"
+              className="rounded-lg font-semibold text-xs text-muted-foreground hover:text-foreground h-10"
               onClick={() => router.push('/user/login')}
             >
               <UserIcon className="w-3.5 h-3.5 mr-2" />
@@ -101,7 +101,7 @@ export default function AdminLoginPage() {
             </Button>
             <Button 
               variant="default" 
-              className="rounded-lg font-bold text-xs shadow-sm h-10"
+              className="rounded-lg font-semibold text-xs shadow-sm h-10"
               onClick={() => router.push('/admin/login')}
             >
               <ShieldCheck className="w-3.5 h-3.5 mr-2" />
@@ -112,7 +112,7 @@ export default function AdminLoginPage() {
           {error && (
             <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs font-bold uppercase tracking-wider">
+              <AlertDescription className="text-xs font-semibold uppercase tracking-wider">
                 {error}
               </AlertDescription>
             </Alert>
@@ -121,13 +121,13 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Admin Email</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider ml-1">Admin Email</Label>
                 <div className="relative">
                   <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     type="email" 
                     placeholder="Enter username" 
-                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-medium"
+                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-normal"
                     required 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -135,13 +135,13 @@ export default function AdminLoginPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Access Key</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider ml-1">Access Key</Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     type="password" 
                     placeholder="••••••••"
-                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-medium"
+                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-normal"
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -150,14 +150,14 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-xl text-base font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all" disabled={loading}>
+            <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-xl text-base font-semibold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <KeyRound className="w-5 h-5 mr-2" />}
               Sign In
             </Button>
           </form>
 
           <div className="pt-4 text-center border-t space-y-4">
-            <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.3em]">SECURE SESSION GATEWAY</p>
+            <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-[0.3em]">SECURE SESSION GATEWAY</p>
           </div>
         </CardContent>
       </Card>

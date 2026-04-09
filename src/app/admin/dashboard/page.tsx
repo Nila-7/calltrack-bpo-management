@@ -9,7 +9,6 @@ import {
   CheckCircle2, 
   PlayCircle,
   Loader2,
-  Users,
   Activity,
   Filter,
   BarChart3,
@@ -83,9 +82,9 @@ export default function AdminDashboard() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Pending': return <Badge variant="outline" className="bg-slate-50 text-slate-500 dark:bg-slate-900/50 dark:border-slate-800 font-black text-[9px] tracking-widest px-2">PENDING</Badge>
-      case 'In Progress': return <Badge variant="default" className="bg-amber-500 font-black text-[9px] tracking-widest px-2">ACTIVE</Badge>
-      case 'Completed': return <Badge variant="default" className="bg-emerald-500 font-black text-[9px] tracking-widest px-2">CLOSED</Badge>
+      case 'Pending': return <Badge variant="outline" className="bg-muted/30 text-muted-foreground border-border font-semibold text-[9px] tracking-widest px-2">PENDING</Badge>
+      case 'In Progress': return <Badge variant="default" className="bg-amber-500 font-semibold text-[9px] tracking-widest px-2">ACTIVE</Badge>
+      case 'Completed': return <Badge variant="default" className="bg-emerald-500 font-semibold text-[9px] tracking-widest px-2">CLOSED</Badge>
       default: return <Badge variant="outline">{status}</Badge>
     }
   }
@@ -95,7 +94,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <Loader2 className="animate-spin text-primary w-12 h-12 mx-auto" />
-          <p className="text-muted-foreground font-black uppercase tracking-[0.2em] text-xs">Verifying Administrative Privileges...</p>
+          <p className="text-muted-foreground font-semibold uppercase tracking-[0.2em] text-xs">Verifying Administrative Privileges...</p>
         </div>
       </div>
     )
@@ -107,13 +106,13 @@ export default function AdminDashboard() {
         <div className="space-y-1">
           <div className="flex items-center gap-3 text-primary">
             <ShieldAlert className="w-6 h-6" />
-            <span className="text-xs font-black uppercase tracking-[0.3em]">System Oversight</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.3em]">System Oversight</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tight text-foreground uppercase">Master Command Center</h1>
-          <p className="text-muted-foreground font-medium">Enterprise-wide surveillance of BPO operations and agent logs</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground uppercase">Master Command Center</h1>
+          <p className="text-muted-foreground font-normal">Enterprise-wide surveillance of BPO operations and agent logs</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="bg-card border-border font-black text-xs uppercase tracking-widest shadow-sm h-12 px-6" onClick={() => window.print()}>
+          <Button variant="outline" className="bg-card border-border font-semibold text-xs uppercase tracking-widest shadow-sm h-12 px-6" onClick={() => window.print()}>
             <Download className="w-4 h-4 mr-2" /> Export Audit Log
           </Button>
         </div>
@@ -134,14 +133,14 @@ export default function AdminDashboard() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input 
               placeholder="Search master logs by customer, agent, or incident signature..." 
-              className="pl-12 h-14 bg-muted/20 border-border focus-visible:ring-primary font-medium"
+              className="pl-12 h-14 bg-muted/20 border-border focus-visible:ring-primary font-normal"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="flex gap-3 w-full lg:w-auto">
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full lg:w-[220px] h-14 bg-muted/20 border-border font-bold text-xs uppercase tracking-widest">
+              <SelectTrigger className="w-full lg:w-[220px] h-14 bg-muted/20 border-border font-semibold text-xs uppercase tracking-widest">
                 <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Status Filter" />
               </SelectTrigger>
@@ -157,38 +156,38 @@ export default function AdminDashboard() {
 
         {/* Global Record Feed */}
         <Card className="border-none shadow-2xl shadow-black/10 overflow-hidden ring-1 ring-border bg-card transition-colors duration-300">
-          <CardHeader className="bg-muted/30 border-b px-8 py-6 flex flex-row items-center justify-between">
+          <CardHeader className="bg-muted/10 border-b px-8 py-6 flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-xl font-black uppercase tracking-tight">Enterprise Record Stream</CardTitle>
-              <CardDescription className="text-muted-foreground font-medium">Real-time synchronization of all agent activities</CardDescription>
+              <CardTitle className="text-xl font-semibold uppercase tracking-tight">Enterprise Record Stream</CardTitle>
+              <CardDescription className="text-muted-foreground font-normal">Real-time synchronization of all agent activities</CardDescription>
             </div>
-            <Badge variant="secondary" className="px-4 py-1.5 font-black text-[10px] tracking-widest bg-primary/10 text-primary border border-primary/20 uppercase">Audit Mode: Full Access</Badge>
+            <Badge variant="secondary" className="px-4 py-1.5 font-semibold text-[10px] tracking-widest bg-primary/10 text-primary border border-primary/20 uppercase">Audit Mode: Full Access</Badge>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border">
               {callsLoading ? (
                 <div className="flex flex-col items-center justify-center py-40 gap-4">
                   <Loader2 className="animate-spin text-primary w-12 h-12" />
-                  <p className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground">Synchronizing Master Feed...</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">Synchronizing Master Feed...</p>
                 </div>
               ) : processedCalls.map((call) => (
-                <div key={call.id} className="p-8 hover:bg-muted/20 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-8 group">
+                <div key={call.id} className="p-8 hover:bg-muted/5 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-8 group">
                   <div className="space-y-3 flex-1">
                     <div className="flex items-center gap-4">
-                      <span className="font-black text-2xl text-foreground tracking-tighter uppercase">{call.customerName}</span>
+                      <span className="font-semibold text-2xl text-foreground tracking-tighter uppercase">{call.customerName}</span>
                       {getStatusBadge(call.status)}
                     </div>
-                    <p className="text-base text-muted-foreground font-medium leading-relaxed max-w-4xl">{call.issue}</p>
-                    <div className="flex items-center gap-6 text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">
-                      <span className="flex items-center gap-2 bg-muted/50 px-3 py-1 rounded-md"><Users className="w-3.5 h-3.5 text-primary" /> Agent: {call.assignedAgent}</span>
-                      <span className="flex items-center gap-2 border-l pl-6"><Clock className="w-3.5 h-3.5 text-muted-foreground" /> Log Timestamp: {call.createdAt?.toDate?.().toLocaleString() || 'N/A'}</span>
+                    <p className="text-base text-muted-foreground font-normal leading-relaxed max-w-4xl">{call.issue}</p>
+                    <div className="flex items-center gap-6 text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.2em]">
+                      <span className="flex items-center gap-2 bg-muted/50 px-3 py-1 rounded-md">Agent: {call.assignedAgent}</span>
+                      <span className="flex items-center gap-2 border-l pl-6">Log Timestamp: {call.createdAt?.toDate?.().toLocaleString() || 'N/A'}</span>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3">
                     {call.status === 'Pending' && (
                       <Button 
-                        className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 font-black text-[11px] tracking-widest px-6 h-12"
+                        className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 font-semibold text-[11px] tracking-widest px-6 h-12"
                         onClick={() => updateStatus(call.id, 'In Progress')}
                       >
                         <PlayCircle className="w-4 h-4 mr-2" /> INITIATE WORKFLOW
@@ -196,14 +195,14 @@ export default function AdminDashboard() {
                     )}
                     {call.status === 'In Progress' && (
                       <Button 
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 font-black text-[11px] tracking-widest px-6 h-12"
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 font-semibold text-[11px] tracking-widest px-6 h-12"
                         onClick={() => updateStatus(call.id, 'Completed')}
                       >
                         <CheckCircle2 className="w-4 h-4 mr-2" /> ARCHIVE RECORD
                       </Button>
                     )}
                     {call.status === 'Completed' && (
-                      <div className="flex items-center gap-2 text-emerald-500 font-black text-[11px] tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-6 py-3 rounded-xl">
+                      <div className="flex items-center gap-2 text-emerald-500 font-semibold text-[11px] tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-6 py-3 rounded-xl">
                         <CheckCircle2 className="w-4 h-4" /> AUDIT VERIFIED
                       </div>
                     )}
@@ -216,8 +215,8 @@ export default function AdminDashboard() {
                     <Search className="w-12 h-12 text-muted-foreground/20" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-foreground font-black uppercase tracking-widest">No Matches Detected</p>
-                    <p className="text-sm font-medium">Your current filter parameters yielded zero results from the master logs.</p>
+                    <p className="text-foreground font-semibold uppercase tracking-widest">No Matches Detected</p>
+                    <p className="text-sm font-normal">Your current filter parameters yielded zero results from the master logs.</p>
                   </div>
                 </div>
               )}
@@ -240,11 +239,11 @@ function StatCard({ title, value, icon, color }: { title: string, value: number,
   return (
     <Card className="border shadow-lg shadow-black/5 bg-card overflow-hidden group">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
-        <CardTitle className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">{title}</CardTitle>
+        <CardTitle className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{title}</CardTitle>
         <div className={`p-2.5 rounded-xl border ${colorMap[color]} transition-transform group-hover:scale-110`}>{icon}</div>
       </CardHeader>
       <CardContent>
-        <div className="text-4xl font-black text-foreground tracking-tighter">{value}</div>
+        <div className="text-3xl font-semibold text-foreground tracking-tighter">{value}</div>
       </CardContent>
     </Card>
   )

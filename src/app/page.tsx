@@ -31,8 +31,8 @@ export default function RootRedirect() {
           <ShieldCheck className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 text-primary animate-pulse" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-foreground font-black uppercase tracking-[0.4em] text-sm">CallTrack Gateway</h2>
-          <p className="text-muted-foreground font-medium text-xs animate-pulse italic">Synchronizing Enterprise Management Nodes...</p>
+          <h2 className="text-foreground font-semibold uppercase tracking-[0.4em] text-sm">CallTrack Gateway</h2>
+          <p className="text-muted-foreground font-normal text-xs animate-pulse italic">Synchronizing Enterprise Management Nodes...</p>
         </div>
       </div>
     </div>

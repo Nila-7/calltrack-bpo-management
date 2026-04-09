@@ -3,9 +3,8 @@
 import { useAuth, useUser } from "@/firebase"
 import { signOut } from "firebase/auth"
 import { Button } from "@/components/ui/button"
-import { ShieldCheck, LogOut, User, LayoutDashboard, UserCircle } from "lucide-react"
+import { ShieldCheck, LogOut, User, UserCircle } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
-import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "./ThemeToggle"
 import { cn } from "@/lib/utils"
 
@@ -22,7 +21,6 @@ export function Navbar() {
 
   const isAdmin = user?.email === 'admin@gmail.com'
 
-  // Only hide navbar on specific scenarios if needed, but the prompt says fixed top navbar
   if (!user && (pathname === '/user/login' || pathname === '/admin/login' || pathname === '/user/signup')) {
     return null
   }
@@ -36,7 +34,7 @@ export function Navbar() {
             <div className="p-2 bg-blue-600 rounded-lg group-hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="font-black text-xl tracking-tighter text-foreground">CallTrack BPO Management</span>
+            <span className="font-semibold text-xl tracking-tighter text-foreground">CallTrack BPO Management</span>
           </div>
 
           {/* Center: Segmented Navigation (Roles) */}
@@ -44,7 +42,7 @@ export function Navbar() {
             <button 
               onClick={() => router.push('/user/dashboard')}
               className={cn(
-                "flex items-center gap-2 py-2 px-5 rounded-lg font-bold text-xs transition-all",
+                "flex items-center gap-2 py-2 px-5 rounded-lg font-semibold text-xs transition-all",
                 pathname.includes('/user/') && !pathname.includes('/login') && !pathname.includes('/signup')
                   ? "bg-primary text-primary-foreground shadow-md"
                   : "text-muted-foreground hover:text-foreground"
@@ -56,7 +54,7 @@ export function Navbar() {
             <button 
               onClick={() => router.push('/admin/dashboard')}
               className={cn(
-                "flex items-center gap-2 py-2 px-5 rounded-lg font-bold text-xs transition-all",
+                "flex items-center gap-2 py-2 px-5 rounded-lg font-semibold text-xs transition-all",
                 pathname.includes('/admin/') && !pathname.includes('/login')
                   ? "bg-primary text-primary-foreground shadow-md"
                   : "text-muted-foreground hover:text-foreground"
@@ -74,11 +72,8 @@ export function Navbar() {
             {user && (
               <div className="flex items-center gap-4 border-l pl-4 ml-2">
                 <div className="hidden md:flex flex-col items-end">
-                  <span className="text-[10px] font-black text-primary uppercase tracking-widest leading-none mb-1">
+                  <span className="text-[10px] font-semibold text-primary uppercase tracking-widest leading-none mb-1">
                     {isAdmin ? 'System Administrator' : 'Support Agent'}
-                  </span>
-                  <span className="text-xs font-bold text-muted-foreground">
-                    {user.email}
                   </span>
                 </div>
                 
