@@ -12,7 +12,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ThemeToggle } from "@/components/Toggle"
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 export default function UserSignupPage() {
   const router = useRouter()
