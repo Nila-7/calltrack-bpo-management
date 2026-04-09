@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PhoneCall, Mail, Lock, Loader2, UserPlus } from "lucide-react"
+import { PhoneCall, Mail, Lock, Loader2, UserPlus, AlertCircle } from "lucide-react"
 import { useAuth, useFirestore, useUser } from "@/firebase"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function UserSignupPage() {
   const router = useRouter()
@@ -24,6 +25,7 @@ export default function UserSignupPage() {
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -33,10 +35,17 @@ export default function UserSignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
 
     const normalizedEmail = email.trim().toLowerCase()
     const cleanPassword = password
     
+    // Client-side validation for password length
+    if (cleanPassword.length < 6) {
+      setError("Security Key must be at least 6 characters long.")
+      return
+    }
+
     setLoading(true)
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, cleanPassword)
@@ -55,13 +64,16 @@ export default function UserSignupPage() {
       router.push("/user/dashboard")
     } catch (error: any) {
       console.error("SIGNUP_ERROR:", error)
-      toast({
-        variant: "destructive",
-        title: "Registration Failed",
-        description: error.code === 'auth/email-already-in-use' 
-          ? "This email is already registered." 
-          : "An error occurred during registration.",
-      })
+      
+      if (error.code === 'auth/email-already-in-use') {
+        setError("This email address is already associated with an account.")
+      } else if (error.code === 'auth/weak-password') {
+        setError("The security key is too weak. Please use at least 6 characters.")
+      } else if (error.code === 'auth/invalid-email') {
+        setError("The email address provided is not valid.")
+      } else {
+        setError("A system error occurred during registration. Please try again.")
+      }
     } finally {
       setLoading(false)
     }
@@ -95,6 +107,15 @@ export default function UserSignupPage() {
         </div>
 
         <CardContent className="p-10 pt-8 space-y-8">
+          {error && (
+            <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20 border">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs font-medium leading-relaxed">
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-5">
               <div className="space-y-2">
@@ -112,7 +133,7 @@ export default function UserSignupPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] ml-1">Security Key</Label>
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] ml-1">Security Key (Min. 6 chars)</Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
