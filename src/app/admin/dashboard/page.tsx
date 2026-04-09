@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -16,13 +16,21 @@ import {
   Search,
   Clock,
   ShieldAlert,
-  Download
+  Download,
+  TrendingUp,
+  Users as UsersIcon,
+  PieChart as PieChartIcon
 } from "lucide-react"
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
 import { collection, doc, updateDoc, query, limit, getDocs } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { 
+  PieChart, Pie, Cell, 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+  AreaChart, Area
+} from "recharts"
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -42,10 +50,66 @@ export default function AdminDashboard() {
 
   const allCallsQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(collection(db, 'callRecords'), limit(500));
+    return query(collection(db, 'callRecords'), limit(1000));
   }, [db, user])
 
   const { data: calls, isLoading: callsLoading } = useCollection(allCallsQuery)
+
+  // --- Data Processing for Analytics ---
+  const analyticsData = useMemo(() => {
+    if (!calls) return { statusData: [], timeData: [], agentData: [] };
+
+    // 1. Status Distribution
+    const statusCounts = {
+      'Pending': 0,
+      'In Progress': 0,
+      'Completed': 0
+    };
+    calls.forEach(c => {
+      if (statusCounts.hasOwnProperty(c.status)) {
+        statusCounts[c.status as keyof typeof statusCounts]++;
+      }
+    });
+    const statusData = [
+      { name: 'Pending', value: statusCounts['Pending'], color: '#eab308' },
+      { name: 'Active', value: statusCounts['In Progress'], color: '#3b82f6' },
+      { name: 'Completed', value: statusCounts['Completed'], color: '#10b981' }
+    ].filter(d => d.value > 0);
+
+    // 2. Volume Over Time (Last 7 Days)
+    const timeMap = new Map();
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      timeMap.set(dateStr, 0);
+    }
+
+    calls.forEach(c => {
+      const createdAt = c.createdAt?.toDate?.() || new Date(c.createdAt);
+      const dateStr = createdAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      if (timeMap.has(dateStr)) {
+        timeMap.set(dateStr, timeMap.get(dateStr) + 1);
+      }
+    });
+
+    const timeData = Array.from(timeMap).map(([date, count]) => ({ date, count }));
+
+    // 3. Agent Performance
+    const agentMap = new Map();
+    calls.forEach(c => {
+      const agent = c.assignedAgent || 'Unassigned';
+      agentMap.set(agent, (agentMap.get(agent) || 0) + 1);
+    });
+
+    const agentData = Array.from(agentMap)
+      .map(([agent, count]) => ({ agent: agent.split('@')[0], count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return { statusData, timeData, agentData };
+  }, [calls]);
 
   const handleExport = async () => {
     if (isExporting) return;
@@ -60,15 +124,11 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Define CSV headers as requested
       const headers = ["Customer Name", "Problem", "Assigned Agent", "Status", "Created At", "User ID"];
       const csvRows = [headers.join(",")];
 
       for (const record of records) {
-        // Format the Firestore timestamp to a readable string
         const createdAt = (record as any).createdAt?.toDate?.()?.toLocaleString() || 'N/A';
-        
-        // Sanitize and escape values for CSV compatibility
         const row = [
           `"${((record as any).customerName || "").toString().replace(/"/g, '""')}"`,
           `"${((record as any).issue || "").toString().replace(/"/g, '""')}"`,
@@ -91,17 +151,9 @@ export default function AdminDashboard() {
       link.click();
       document.body.removeChild(link);
 
-      toast({ 
-        title: "Export Success", 
-        description: "Audit log downloaded successfully." 
-      });
+      toast({ title: "Export Success", description: "Audit log downloaded successfully." });
     } catch (err: any) {
-      console.error("AUDIT_LOG_EXPORT_FAILURE:", err);
-      toast({ 
-        variant: "destructive", 
-        title: "Export Error", 
-        description: "System failed to generate the audit report." 
-      });
+      toast({ variant: "destructive", title: "Export Error", description: "System failed to generate report." });
     } finally {
       setIsExporting(false);
     }
@@ -189,6 +241,7 @@ export default function AdminDashboard() {
       </header>
 
       <div className="space-y-10">
+        {/* Top Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <StatCard title="System Volume" value={stats.total} icon={<BarChart3 className="w-4 h-4" />} color="primary" />
           <StatCard title="Pending Queue" value={stats.pending} icon={<Clock className="h-4 w-4" />} color="slate" />
@@ -196,6 +249,93 @@ export default function AdminDashboard() {
           <StatCard title="Total Archived" value={stats.closed} icon={<CheckCircle2 className="h-4 w-4" />} color="emerald" />
         </div>
 
+        {/* Analytics Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Status Distribution */}
+          <Card className="shadow-sm border-border bg-card">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <PieChartIcon className="w-4 h-4 text-primary" />
+                <CardTitle className="text-sm font-semibold uppercase tracking-tight">Status Distribution</CardTitle>
+              </div>
+              <CardDescription className="text-[10px]">Current queue composition</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[280px]">
+              {analyticsData.statusData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={analyticsData.statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {analyticsData.statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground text-[10px] uppercase tracking-widest">No status data</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Volume Over Time */}
+          <Card className="shadow-sm border-border bg-card">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                <CardTitle className="text-sm font-semibold uppercase tracking-tight">System Traffic</CardTitle>
+              </div>
+              <CardDescription className="text-[10px]">Calls logged over last 7 days</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analyticsData.timeData}>
+                  <defs>
+                    <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} />
+                  <YAxis fontSize={10} axisLine={false} tickLine={false} />
+                  <RechartsTooltip />
+                  <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorCount)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Agent Performance */}
+          <Card className="shadow-sm border-border bg-card">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <UsersIcon className="w-4 h-4 text-primary" />
+                <CardTitle className="text-sm font-semibold uppercase tracking-tight">Top Performers</CardTitle>
+              </div>
+              <CardDescription className="text-[10px]">Calls handled by top agents</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analyticsData.agentData} layout="vertical" margin={{ left: -10, right: 20 }}>
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="agent" type="category" fontSize={10} width={70} axisLine={false} tickLine={false} />
+                  <RechartsTooltip />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Controls & Logs */}
         <div className="bg-card p-6 rounded-2xl shadow-xl shadow-black/5 border border-border flex flex-col lg:flex-row gap-6 items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
