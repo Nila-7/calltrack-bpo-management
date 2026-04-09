@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -37,10 +38,15 @@ export default function AdminLoginPage() {
     setError(null)
     setLoading(true)
     
+    // Normalize email and fix common typos for admin
     const normalizedEmail = email.trim().toLowerCase()
+    let finalEmail = normalizedEmail
+    if (normalizedEmail.includes('admin@gamil.com')) {
+      finalEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
+    }
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password)
+      const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password)
       const authenticatedUser = userCredential.user
 
       if (authenticatedUser.email === 'admin@gmail.com') {
@@ -50,12 +56,22 @@ export default function AdminLoginPage() {
         })
         router.push("/admin/dashboard")
       } else {
+        // Sign out immediately if not the admin email
         await signOut(auth)
         setError("Access denied. This portal is strictly for system administrators.")
       }
     } catch (err: any) {
+      // Log the error for debugging as requested
       console.error("ADMIN_AUTH_FAILURE:", err)
-      setError("Authentication failed. Please check your credentials.")
+      
+      // Provide more specific feedback
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        setError("Invalid email or password. Please verify your credentials.")
+      } else if (err.code === 'auth/invalid-email') {
+        setError("The email address provided is not valid.")
+      } else {
+        setError("Authentication failed. Please check your network or try again later.")
+      }
     } finally {
       setLoading(false)
     }
@@ -84,7 +100,7 @@ export default function AdminLoginPage() {
           </div>
           <div className="space-y-1">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">CallTrack</h1>
-            <p className="text-muted-foreground text-sm font-normal uppercase tracking-widest">Smart BPO Call Management System</p>
+            <p className="text-muted-foreground text-sm font-normal uppercase tracking-widest leading-relaxed">Smart BPO Call Management System</p>
           </div>
         </div>
 
@@ -126,7 +142,7 @@ export default function AdminLoginPage() {
                   <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     type="email" 
-                    placeholder="Enter username" 
+                    placeholder="Enter admin email" 
                     className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-normal"
                     required 
                     value={email}

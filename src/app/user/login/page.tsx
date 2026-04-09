@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -6,11 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PhoneCall, Lock, Loader2, KeyRound, User as UserIcon, ShieldCheck } from "lucide-react"
+import { PhoneCall, Lock, Loader2, KeyRound, User as UserIcon, ShieldCheck, AlertCircle } from "lucide-react"
 import { useAuth, useUser } from "@/firebase"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function UserLoginPage() {
   const router = useRouter()
@@ -21,6 +23,7 @@ export default function UserLoginPage() {
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -34,22 +37,33 @@ export default function UserLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     setLoading(true)
+    
+    // Normalize email and fix common typos
+    const normalizedEmail = email.trim().toLowerCase()
+    let finalEmail = normalizedEmail
+    if (normalizedEmail.includes('admin@gamil.com')) {
+      finalEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
+    }
+
     try {
-      const normalizedEmail = email.trim().toLowerCase()
-      await signInWithEmailAndPassword(auth, normalizedEmail, password)
+      await signInWithEmailAndPassword(auth, finalEmail, password)
       
       toast({
         title: "Access Authorized",
         description: `Welcome back. Redirecting to workspace...`,
       })
-    } catch (error: any) {
-      console.error("USER_AUTH_ERROR:", error)
-      toast({
-        variant: "destructive",
-        title: "Authentication Failed",
-        description: "Invalid credentials. Please verify your email and password.",
-      })
+    } catch (err: any) {
+      console.error("USER_AUTH_ERROR:", err)
+      
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        setError("Invalid credentials. Please verify your email and password.")
+      } else if (err.code === 'auth/invalid-email') {
+        setError("The email address provided is not valid.")
+      } else {
+        setError("Authentication failed. Please check your network or try again later.")
+      }
     } finally {
       setLoading(false)
     }
@@ -78,7 +92,7 @@ export default function UserLoginPage() {
           </div>
           <div className="space-y-1">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">CallTrack</h1>
-            <p className="text-muted-foreground text-sm font-normal uppercase tracking-widest">Smart BPO Call Management System</p>
+            <p className="text-muted-foreground text-sm font-normal uppercase tracking-widest leading-relaxed">Smart BPO Call Management System</p>
           </div>
         </div>
 
@@ -103,6 +117,15 @@ export default function UserLoginPage() {
             </Button>
           </div>
 
+          {error && (
+            <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs font-semibold uppercase tracking-wider">
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
@@ -111,7 +134,7 @@ export default function UserLoginPage() {
                   <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     type="email" 
-                    placeholder="Enter username" 
+                    placeholder="Enter email" 
                     className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-normal"
                     required 
                     value={email}
