@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import { 
   CheckCircle2, 
   PlayCircle,
@@ -22,7 +23,8 @@ import {
   PieChart as PieChartIcon,
   LayoutDashboard,
   Database,
-  Timer
+  Timer,
+  UserPlus
 } from "lucide-react"
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
 import { collection, doc, updateDoc, query, limit, getDocs, serverTimestamp } from "firebase/firestore"
@@ -201,9 +203,19 @@ export default function AdminDashboard() {
         updates.resolvedAt = serverTimestamp();
       }
       await updateDoc(docRef, updates);
-      toast({ title: "Log Updated", description: `Record status set to ${status}.` });
+      toast({ title: "Lifecycle Updated", description: `Record transitioned to ${status}.` });
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Action Inhibited", description: "Failed to modify record status." });
+      toast({ variant: "destructive", title: "Update Failed", description: "Authorization error or database disconnect." });
+    }
+  }
+
+  const updateAgent = async (id: string, assignedAgent: string) => {
+    try {
+      const docRef = doc(db, 'callRecords', id);
+      await updateDoc(docRef, { assignedAgent });
+      toast({ title: "Workforce Adjusted", description: `Record reassigned to agent identity.` });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Update Failed", description: "Database rejected the agent reassignment." });
     }
   }
 
@@ -418,7 +430,7 @@ export default function AdminDashboard() {
                   <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-muted-foreground">Synchronizing Master Feed...</p>
                 </div>
               ) : processedCalls.map((call) => (
-                <div key={call.id} className="p-10 hover:bg-muted/10 transition-all duration-300 flex flex-col lg:flex-row lg:items-center justify-between gap-10 group">
+                <div key={call.id} className="p-10 hover:bg-muted/10 transition-all duration-300 flex flex-col lg:flex-row lg:items-start justify-between gap-10 group">
                   <div className="space-y-4 flex-1">
                     <div className="flex items-center gap-6">
                       <span className="font-semibold text-2xl text-foreground tracking-tight">{call.customerName}</span>
@@ -426,39 +438,44 @@ export default function AdminDashboard() {
                     </div>
                     <p className="text-[15px] text-muted-foreground font-normal leading-relaxed max-w-5xl">{call.issue}</p>
                     <div className="flex items-center gap-8 text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.2em] pt-4">
-                      <div className="flex items-center gap-2 bg-muted/40 px-4 py-2 rounded-xl">
-                        <UsersIcon className="w-3 h-3 text-primary" />
-                        <span>AGENT: {call.assignedAgent}</span>
-                      </div>
-                      <div className="flex items-center gap-2 border-l border-border pl-8">
+                      <div className="flex items-center gap-2 border-l border-border pl-0">
                         <Clock className="w-3 h-3" />
                         <span>TIMESTAMP: {call.createdAt?.toDate?.().toLocaleString() || 'N/A'}</span>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-4 shrink-0">
-                    {call.status === 'Pending' && (
-                      <Button 
-                        className="bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20 font-semibold text-[10px] tracking-widest px-8 h-12 rounded-2xl"
-                        onClick={() => updateStatus(call.id, 'In Progress')}
-                      >
-                        <PlayCircle className="w-4 h-4 mr-2" /> INITIATE PROCESS
-                      </Button>
-                    )}
-                    {call.status === 'In Progress' && (
-                      <Button 
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-500/20 font-semibold text-[10px] tracking-widest px-8 h-12 rounded-2xl"
-                        onClick={() => updateStatus(call.id, 'Completed')}
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-2" /> FINALIZE RECORD
-                      </Button>
-                    )}
-                    {call.status === 'Completed' && (
-                      <div className="flex items-center gap-3 text-emerald-600 font-semibold text-[10px] tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-8 py-3.5 rounded-2xl">
-                        <CheckCircle2 className="w-4 h-4" /> COMPLIANCE VERIFIED
+                  <div className="flex flex-col md:flex-row items-center gap-4 shrink-0">
+                    <div className="flex flex-col gap-1.5 min-w-[180px]">
+                      <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">Manage Status</Label>
+                      <Select value={call.status} onValueChange={(val) => updateStatus(call.id, val)}>
+                        <SelectTrigger className="h-11 bg-muted/30 border-none rounded-xl text-[11px] font-semibold uppercase tracking-widest focus:ring-primary">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="Pending">PENDING</SelectItem>
+                          <SelectItem value="In Progress">ACTIVE</SelectItem>
+                          <SelectItem value="Completed">RESOLVED</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 min-w-[220px]">
+                      <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">Assign Agent</Label>
+                      <div className="relative group">
+                        <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <Input
+                          defaultValue={call.assignedAgent}
+                          onBlur={(e) => {
+                            if (e.target.value !== call.assignedAgent) {
+                              updateAgent(call.id, e.target.value);
+                            }
+                          }}
+                          className="pl-10 h-11 bg-muted/30 border-none rounded-xl text-[11px] font-medium focus-visible:ring-primary"
+                          placeholder="Agent Identity..."
+                        />
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               ))}
