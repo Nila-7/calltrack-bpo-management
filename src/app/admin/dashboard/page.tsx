@@ -19,7 +19,7 @@ import {
   Download
 } from "lucide-react"
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
-import { collection, doc, updateDoc, query, limit } from "firebase/firestore"
+import { collection, doc, updateDoc, query, limit, getDocs } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -32,10 +32,11 @@ export default function AdminDashboard() {
 
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
+  const [isExporting, setIsExporting] = useState(false)
 
   useEffect(() => {
     if (!isUserLoading && !user) {
-      router.push("/admin/login")
+      router.push("/user/login")
     }
   }, [user, isUserLoading, router])
 
@@ -45,6 +46,66 @@ export default function AdminDashboard() {
   }, [db, user])
 
   const { data: calls, isLoading: callsLoading } = useCollection(allCallsQuery)
+
+  const handleExport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+
+    try {
+      const querySnapshot = await getDocs(collection(db, 'callRecords'));
+      const records = querySnapshot.docs.map(doc => doc.data());
+
+      if (records.length === 0) {
+        toast({ title: "No Records", description: "There are no call records available to export." });
+        return;
+      }
+
+      // Define CSV headers as requested
+      const headers = ["Customer Name", "Problem", "Assigned Agent", "Status", "Created At", "User ID"];
+      const csvRows = [headers.join(",")];
+
+      for (const record of records) {
+        // Format the Firestore timestamp to a readable string
+        const createdAt = (record as any).createdAt?.toDate?.()?.toLocaleString() || 'N/A';
+        
+        // Sanitize and escape values for CSV compatibility
+        const row = [
+          `"${((record as any).customerName || "").toString().replace(/"/g, '""')}"`,
+          `"${((record as any).issue || "").toString().replace(/"/g, '""')}"`,
+          `"${((record as any).assignedAgent || "").toString().replace(/"/g, '""')}"`,
+          `"${((record as any).status || "").toString().replace(/"/g, '""')}"`,
+          `"${createdAt}"`,
+          `"${((record as any).userId || "").toString().replace(/"/g, '""')}"`
+        ];
+        csvRows.push(row.join(","));
+      }
+
+      const csvString = csvRows.join("\n");
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "audit-log.csv");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({ 
+        title: "Export Success", 
+        description: "Audit log downloaded successfully." 
+      });
+    } catch (err: any) {
+      console.error("AUDIT_LOG_EXPORT_FAILURE:", err);
+      toast({ 
+        variant: "destructive", 
+        title: "Export Error", 
+        description: "System failed to generate the audit report." 
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   const updateStatus = async (id: string, status: string) => {
     try {
@@ -115,8 +176,14 @@ export default function AdminDashboard() {
           <p className="text-muted-foreground font-normal text-sm">Enterprise-wide surveillance of BPO operations and agent logs</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="bg-card border-border font-medium text-xs uppercase tracking-widest shadow-sm h-11 px-6" onClick={() => window.print()}>
-            <Download className="w-4 h-4 mr-2" /> Export Audit Log
+          <Button 
+            variant="outline" 
+            className="bg-card border-border font-medium text-xs uppercase tracking-widest shadow-sm h-11 px-6" 
+            onClick={handleExport}
+            disabled={isExporting}
+          >
+            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            {isExporting ? "Exporting..." : "Export Audit Log"}
           </Button>
         </div>
       </header>
