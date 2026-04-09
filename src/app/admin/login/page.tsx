@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -38,15 +37,21 @@ export default function AdminLoginPage() {
     setError(null)
     setLoading(true)
     
-    // Normalize email and fix common typos for admin
+    // 1. Clean the Inputs per requirements
     const normalizedEmail = email.trim().toLowerCase()
+    const cleanPassword = password
+    
+    // Auto-fix common typos if detected, but normalizedEmail remains the base
     let finalEmail = normalizedEmail
     if (normalizedEmail.includes('admin@gamil.com')) {
       finalEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
     }
 
+    // 2. Add Temporary Debug Logging
+    console.log("Attempting login for:", finalEmail)
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password)
+      const userCredential = await signInWithEmailAndPassword(auth, finalEmail, cleanPassword)
       const authenticatedUser = userCredential.user
 
       if (authenticatedUser.email === 'admin@gmail.com') {
@@ -61,12 +66,12 @@ export default function AdminLoginPage() {
         setError("Access denied. This portal is strictly for system administrators.")
       }
     } catch (err: any) {
-      // Log the error for debugging as requested
+      // 4. Log the Error for exact Firebase code visibility
       console.error("ADMIN_AUTH_FAILURE:", err)
       
-      // Provide more specific feedback
+      // 3. Update Error Handling for specific credential failures
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-        setError("Invalid email or password. Please verify your credentials.")
+        setError("Invalid Email or Password. Please check your credentials or reset your password in the Firebase Console.")
       } else if (err.code === 'auth/invalid-email') {
         setError("The email address provided is not valid.")
       } else {
@@ -86,63 +91,63 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 relative bg-background">
+    <div className="min-h-screen flex items-center justify-center p-6 relative bg-background transition-colors duration-300">
       <div className="absolute top-8 right-8 z-50">
         <ThemeToggle />
       </div>
 
       <Card className="w-full max-w-[500px] shadow-2xl border-none bg-card p-0 overflow-hidden rounded-[2rem]">
-        <div className="p-8 pb-0 text-center space-y-4">
+        <div className="p-10 pb-0 text-center space-y-4">
           <div className="flex justify-center">
             <div className="p-4 bg-primary/10 rounded-2xl">
               <PhoneCall className="w-10 h-10 text-primary" />
             </div>
           </div>
           <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">CallTrack</h1>
-            <p className="text-muted-foreground text-sm font-normal uppercase tracking-widest leading-relaxed">Smart BPO Call Management System</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground uppercase">CallTrack</h1>
+            <p className="text-muted-foreground text-xs font-normal uppercase tracking-widest leading-relaxed">Smart BPO Call Management System</p>
           </div>
         </div>
 
-        <CardContent className="p-8 pt-6 space-y-8">
+        <CardContent className="p-10 pt-8 space-y-8">
           {/* Portal Toggle */}
-          <div className="grid grid-cols-2 p-1 bg-muted rounded-xl gap-1">
+          <div className="grid grid-cols-2 p-1.5 bg-muted rounded-2xl gap-2">
             <Button 
               variant="ghost" 
-              className="rounded-lg font-semibold text-xs text-muted-foreground hover:text-foreground h-10"
+              className="rounded-xl font-semibold text-xs text-muted-foreground hover:text-foreground h-11"
               onClick={() => router.push('/user/login')}
             >
-              <UserIcon className="w-3.5 h-3.5 mr-2" />
+              <UserIcon className="w-4 h-4 mr-2" />
               User Portal
             </Button>
             <Button 
               variant="default" 
-              className="rounded-lg font-semibold text-xs shadow-sm h-10"
+              className="rounded-xl font-semibold text-xs shadow-md h-11 bg-primary text-primary-foreground"
               onClick={() => router.push('/admin/login')}
             >
-              <ShieldCheck className="w-3.5 h-3.5 mr-2" />
+              <ShieldCheck className="w-4 h-4 mr-2" />
               Admin Console
             </Button>
           </div>
 
           {error && (
-            <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20">
+            <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20 border">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs font-semibold uppercase tracking-wider">
+              <AlertDescription className="text-xs font-medium leading-relaxed">
                 {error}
               </AlertDescription>
             </Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider ml-1">Admin Email</Label>
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] ml-1">Administrator Email</Label>
                 <div className="relative">
                   <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     type="email" 
-                    placeholder="Enter admin email" 
+                    placeholder="admin@gmail.com" 
                     className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-normal"
                     required 
                     value={email}
@@ -151,7 +156,7 @@ export default function AdminLoginPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider ml-1">Access Key</Label>
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] ml-1">Access Key</Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
@@ -166,14 +171,14 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-xl text-base font-semibold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all" disabled={loading}>
+            <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-semibold uppercase tracking-[0.2em] shadow-lg shadow-primary/20 transition-all" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <KeyRound className="w-5 h-5 mr-2" />}
               Sign In
             </Button>
           </form>
 
-          <div className="pt-4 text-center border-t space-y-4">
-            <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-[0.3em]">SECURE SESSION GATEWAY</p>
+          <div className="pt-6 text-center border-t space-y-4">
+            <p className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-[0.4em]">SECURE SESSION GATEWAY</p>
           </div>
         </CardContent>
       </Card>
