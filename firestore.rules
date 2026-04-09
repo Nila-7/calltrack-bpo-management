@@ -1,83 +1,32 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * IntelliSecureX Security Rules
-     *
-     * CORE PHILOSOPHY:
-     * This ruleset enforces a strict user-ownership model designed for a high-security document management platform. 
-     * Access is primarily governed by a user's identity (UID) and their role (Admin vs. User).
-     *
-     * DATA STRUCTURE:
-     * - User-specific metadata and configurations are stored in the top-level `/userProfiles/` collection.
-     * - Document metadata and analysis results are organized hierarchically under `/users/{userId}/documents/` 
-     *   to provide natural path-based isolation.
-     * - System-wide auditing is handled via the `/activityLogs/` root collection.
-     *
-     * KEY SECURITY DECISIONS:
-     * - AUTHORIZATION INDEPENDENCE: We use denormalized fields (like 'ownerId' or 'userId') and path-based 
-     *   variables to ensure rules can execute without costly 'get()' calls where possible.
-     * - ROLE-BASED ACCESS: Administrative access is determined by a 'role' field inside the user's profile.
-     * - IMMUTABILITY: Critical audit data (ActivityLogs) and relational ownership links are treated 
-     *   as immutable once created.
-     * - PROTOTYPING FLEXIBILITY: While access control is strict, data schemas (types and required fields) 
-     *   are not enforced here to allow for rapid iteration on the frontend.
-     */
-
-    // --- Helper Functions ---
-
-    /** Checks if the request is from an authenticated user. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** Checks if the authenticated user's UID matches the provided userId. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** 
-     * Verifies if the user exists and is the owner before permitting changes. 
-     * Used for update/delete to prevent operations on non-existent data.
-     */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    /** 
-     * Checks if the authenticated user has the 'Admin' role.
-     * Note: This involves a read to the userProfiles collection.
-     */
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
+      return isSignedIn() && (
+        request.auth.token.email == 'admin@gmail.com' || 
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin'
+      );
     }
 
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for user profile data including roles and email.
-     * @path /userProfiles/{userId}
-     * @allow (create) if auth.uid matches path ID.
-     * @deny (list) if user is not an Admin.
-     * @principle Path-based ownership for users and role-based oversight for admins.
-     */
     match /userProfiles/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
+      allow update: if isOwner(userId);
       allow delete: if isAdmin();
     }
 
-    /**
-     * @description System audit logs for tracking user and document activity.
-     * @path /activityLogs/{logId}
-     * @allow (create) if the user is authenticated.
-     * @deny (update/delete) always, as logs are immutable for auditing.
-     * @principle Field-based authorization and restricted admin-only listing.
-     */
-    match /activityLogs/{logId} {
+    match /activity_logs/{logId} {
       allow get: if isAdmin() || (resource != null && resource.data.userId == request.auth.uid);
       allow list: if isAdmin();
       allow create: if isSignedIn();
@@ -85,33 +34,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    /**
-     * @description Document metadata stored per user.
-     * @path /users/{userId}/documents/{documentId}
-     * @allow (create) if userId in path matches auth and data.ownerId.
-     * @deny (update) if the ownerId is being changed.
-     * @principle Relational integrity and path-based ownership.
-     */
     match /users/{userId}/documents/{documentId} {
       allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isExistingOwner(userId) && request.resource.data.ownerId == resource.data.ownerId;
-      allow delete: if isExistingOwner(userId);
-
-      /**
-       * @description Results of sensitive entity analysis for a specific document.
-       * @path /users/{userId}/documents/{documentId}/analysisResults/{resultId}
-       * @allow (read/write) if the parent document's owner matches auth.
-       * @deny (any) if the path userId does not match the user's UID.
-       * @principle Inherited ownership through the document hierarchy.
-       */
-      match /analysisResults/{resultId} {
-        allow get, list: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId);
-        allow update: if isExistingOwner(userId);
-        allow delete: if isExistingOwner(userId);
-      }
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
+    match /calls/{callId} {
+      allow read: if isAdmin() || (resource != null && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
   }
 }

@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -134,51 +135,19 @@
         "status"
       ]
     },
-    "DocumentAnalysisResult": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "DocumentAnalysisResult",
+    "CallRecord": {
+      "title": "CallRecord",
+      "description": "Represents a call record in the BPO Call Center System.",
       "type": "object",
-      "description": "Stores the results of the NLP detection and decoy generation for sensitive entities found within a specific document.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for this specific document analysis result."
-        },
-        "documentId": {
-          "type": "string",
-          "description": "Reference to the Document entity this analysis result belongs to. (Relationship: Document 1:N DocumentAnalysisResult)"
-        },
-        "entityType": {
-          "type": "string",
-          "description": "The type of sensitive entity detected (e.g., 'PERSON_NAME', 'PAN_NUMBER', 'EMAIL')."
-        },
-        "originalValue": {
-          "type": "string",
-          "description": "The actual sensitive value detected in the original document."
-        },
-        "decoyValue": {
-          "type": "string",
-          "description": "The replacement decoy value generated for the sensitive entity."
-        },
-        "confidence": {
-          "type": "number",
-          "description": "A numerical score (0.0 to 1.0) indicating the confidence level of the detection."
-        },
-        "detectedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when this entity was detected and processed.",
-          "format": "date-time"
-        }
+        "customerName": { "type": "string" },
+        "issue": { "type": "string" },
+        "assignedAgent": { "type": "string" },
+        "status": { "type": "string", "enum": ["Waiting", "In Progress", "Completed"] },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "documentId",
-        "entityType",
-        "originalValue",
-        "decoyValue",
-        "confidence",
-        "detectedAt"
-      ]
+      "required": ["customerName", "issue", "status", "userId", "createdAt"]
     }
   },
   "auth": {
@@ -196,23 +165,23 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user-specific information, including their role (Admin/User) which is essential for authorization. Access is path-based: a user can only read/write their own profile.",
+          "description": "Stores user-specific information, including their role (Admin/User).",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user, corresponding to Firebase Authentication UID."
+              "description": "The unique identifier of the user."
             }
           ]
         }
       },
       {
-        "path": "/activityLogs/{logId}",
+        "path": "/activity_logs/{logId}",
         "definition": {
           "entityName": "ActivityLog",
           "schema": {
             "$ref": "#/backend/entities/ActivityLog"
           },
-          "description": "Records significant user and system activities for monitoring and auditing. Includes 'userId' and 'documentId' for context and authorization independence. Primarily readable by Admins, users can read their own logs.",
+          "description": "Records significant user and system activities.",
           "params": [
             {
               "name": "logId",
@@ -228,44 +197,35 @@
           "schema": {
             "$ref": "#/backend/entities/Document"
           },
-          "description": "Stores metadata for documents uploaded by a specific user. Includes a denormalized 'ownerId' field which matches the path's 'userId' for robust authorization independence and Collection Group Queries. Ensures users only access their own document metadata.",
+          "description": "Stores metadata for documents uploaded by a specific user.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the document owner, corresponding to Firebase Authentication UID."
+              "description": "The unique identifier of the document owner."
             },
             {
               "name": "documentId",
-              "description": "The unique identifier for the document metadata entry."
+              "description": "The unique identifier for the document entry."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/documents/{documentId}/analysisResults/{resultId}",
+        "path": "/calls/{callId}",
         "definition": {
-          "entityName": "DocumentAnalysisResult",
+          "entityName": "CallRecord",
           "schema": {
-            "$ref": "#/backend/entities/DocumentAnalysisResult"
+            "$ref": "#/backend/entities/CallRecord"
           },
-          "description": "Stores NLP detection and decoy generation results for sensitive entities within a specific document. Access is inherited from and tied to the parent document's ownership, leveraging the 'userId' in the path for authorization independence.",
+          "description": "Stores call center records for the BPO module.",
           "params": [
             {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns the parent document."
-            },
-            {
-              "name": "documentId",
-              "description": "The unique identifier of the parent document."
-            },
-            {
-              "name": "resultId",
-              "description": "The unique identifier for a specific document analysis result."
+              "name": "callId",
+              "description": "The unique identifier for the call record."
             }
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore data structure for IntelliSecureX prioritizes robust security, scalability, and debuggability by strictly adhering to the core design principles. The structure leverages a hierarchical approach for user-owned data and top-level collections for global, system-wide data, enabling clear and concise security rules.\n\n**Authorization Independence (CRITICAL):**\nThis design mandates the denormalization of authorization context to eliminate the need for `get()` calls in security rules, thereby supporting atomic operations and simplifying rule debugging. Here's how it's achieved:\n\n1.  **`/userProfiles/{userId}`:** Access to a user's profile is directly tied to the authenticated user's ID (`request.auth.uid == userId`), ensuring immediate authorization without external lookups.\n2.  **`/users/{userId}/documents/{documentId}`:** The `Document` entity includes an explicit `ownerId` field. While the `userId` in the path already denotes ownership, including `ownerId` in the document itself serves as a crucial denormalized authorization field. This allows security rules to evaluate `request.auth.uid == resource.data.ownerId` directly for `get` and `list` operations, ensuring atomicity and facilitating potential Collection Group Queries if needed to list all documents across all users. This eliminates any dependency on retrieving parent document data for authorization.\n3.  **`/users/{userId}/documents/{documentId}/analysisResults/{resultId}`:** `DocumentAnalysisResult` documents are nested directly under their respective `Document` and `User` paths. Their access is implicitly governed by the parent `Document`'s ownership. The rule `request.auth.uid == userId` (where `userId` is the path parameter) naturally provides authorization independence for these subcollection documents.\n4.  **`/activityLogs/{logId}`:** Each `ActivityLog` document includes a `userId` field. For a user to access their own activity logs, the rule `request.auth.uid == resource.data.userId` can be applied without requiring a `get()` call to a user profile. Admin access to all logs is based on their `role` in `userProfiles`, which is a single `get()` to their own profile, not a hierarchical dependency for `activityLogs` themselves.\n\n**QAPs (Rules are not Filters):**\nThe structural segregation and denormalization strategy ensure that security rules are not used as filters, allowing for efficient and secure `list` operations:\n\n1.  **`/userProfiles/{userId}`:** A user can `get` their own profile directly. Admins, identified by their `role` in `userProfiles/{adminUid}`, can `list` all user profiles efficiently, without filtering.\n2.  **`/users/{userId}/documents/{documentId}`:** Users can perform `list` queries on *their own* documents (`/users/{{request.auth.uid}}/documents`). This is a direct query without server-side filtering. For admins, `Collection Group Queries` on the `documents` collection can be used, with the `ownerId` field enabling an efficient rule `allow list: if isAdmin() || request.auth.uid == resource.data.ownerId;`. This avoids filtering results after retrieval.\n3.  **`/users/{userId}/documents/{documentId}/analysisResults/{resultId}`:** Similar to documents, users can `list` analysis results for *their own* documents, as the path inherently scopes the query to their owned data.\n4.  **`/activityLogs/{logId}`:** Admins can `list` *all* activity logs directly from the root collection. If users are allowed to view only their own logs, a query can be made with `where('userId', '==', request.auth.uid)`, which is an indexed query and not a rule-based filter."
+    ]
   }
 }
