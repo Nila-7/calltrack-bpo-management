@@ -36,10 +36,11 @@ export default function AdminLoginPage() {
     setError(null)
     setLoading(true)
     
+    // Normalize inputs
     const normalizedEmail = email.trim().toLowerCase()
     const cleanPassword = password
 
-    console.log("Attempting login for:", normalizedEmail)
+    console.log("Attempting admin login for:", normalizedEmail)
 
     try {
       await signInWithEmailAndPassword(auth, normalizedEmail, cleanPassword)
@@ -56,6 +57,8 @@ export default function AdminLoginPage() {
         setError("Invalid Email or Password. Please check your credentials.")
       } else if (err.code === 'auth/invalid-email') {
         setError("The email address provided is not valid.")
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Too many failed attempts. Please try again later.")
       } else {
         setError("Authentication failed. Please check your network or try again later.")
       }

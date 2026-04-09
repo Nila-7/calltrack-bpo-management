@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -39,10 +40,11 @@ export default function UserLoginPage() {
     setError(null)
     setLoading(true)
     
-    // 1. Clean the Inputs per requirements
+    // 1. Clean and normalize inputs
     const normalizedEmail = email.trim().toLowerCase()
     const cleanPassword = password
     
+    // Auto-correct common typo for the primary admin email
     let finalEmail = normalizedEmail
     if (normalizedEmail.includes('admin@gamil.com')) {
       finalEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
@@ -58,12 +60,15 @@ export default function UserLoginPage() {
         description: `Welcome back. Redirecting to workspace...`,
       })
     } catch (err: any) {
-      console.error("USER_AUTH_ERROR:", err)
+      // Log full error for debugging
+      console.error("USER_AUTH_FAILURE:", err)
       
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         setError("Invalid Email or Password. Please check your credentials.")
       } else if (err.code === 'auth/invalid-email') {
         setError("The email address provided is not valid.")
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Too many failed attempts. Please try again later or reset your password.")
       } else {
         setError("Authentication failed. Please check your network or try again later.")
       }
@@ -100,7 +105,6 @@ export default function UserLoginPage() {
         </div>
 
         <CardContent className="p-10 pt-8 space-y-8">
-          {/* Portal Toggle */}
           <div className="grid grid-cols-2 p-1.5 bg-muted rounded-2xl gap-2">
             <Button 
               variant="default" 
