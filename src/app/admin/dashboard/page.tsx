@@ -19,7 +19,9 @@ import {
   Download,
   TrendingUp,
   Users as UsersIcon,
-  PieChart as PieChartIcon
+  PieChart as PieChartIcon,
+  LayoutDashboard,
+  Database
 } from "lucide-react"
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
 import { collection, doc, updateDoc, query, limit, getDocs } from "firebase/firestore"
@@ -55,11 +57,9 @@ export default function AdminDashboard() {
 
   const { data: calls, isLoading: callsLoading } = useCollection(allCallsQuery)
 
-  // --- Data Processing for Analytics ---
   const analyticsData = useMemo(() => {
     if (!calls) return { statusData: [], timeData: [], agentData: [] };
 
-    // 1. Status Distribution
     const statusCounts = {
       'Pending': 0,
       'In Progress': 0,
@@ -76,7 +76,6 @@ export default function AdminDashboard() {
       { name: 'Completed', value: statusCounts['Completed'], color: '#10b981' }
     ].filter(d => d.value > 0);
 
-    // 2. Volume Over Time (Last 7 Days)
     const timeMap = new Map();
     const now = new Date();
     for (let i = 6; i >= 0; i--) {
@@ -96,7 +95,6 @@ export default function AdminDashboard() {
 
     const timeData = Array.from(timeMap).map(([date, count]) => ({ date, count }));
 
-    // 3. Agent Performance
     const agentMap = new Map();
     calls.forEach(c => {
       const agent = c.assignedAgent || 'Unassigned';
@@ -193,13 +191,13 @@ export default function AdminDashboard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Pending': 
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200 font-medium uppercase text-[9px] tracking-widest px-2">PENDING</Badge>
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200 font-medium uppercase text-[10px] tracking-widest px-2">PENDING</Badge>
       case 'In Progress': 
-        return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 font-medium uppercase text-[9px] tracking-widest px-2">ACTIVE</Badge>
+        return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 font-medium uppercase text-[10px] tracking-widest px-2">ACTIVE</Badge>
       case 'Completed': 
-        return <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 font-medium uppercase text-[9px] tracking-widest px-2">CLOSED</Badge>
+        return <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 font-medium uppercase text-[10px] tracking-widest px-2">CLOSED</Badge>
       default: 
-        return <Badge variant="outline" className="text-[9px]">{status}</Badge>
+        return <Badge variant="outline" className="text-[10px]">{status}</Badge>
     }
   }
 
@@ -218,49 +216,49 @@ export default function AdminDashboard() {
 
   return (
     <div className="w-full max-w-[1600px] mx-auto px-6 py-10 transition-all duration-300">
-      <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b pb-10">
-        <div className="space-y-2">
+      <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b pb-12">
+        <div className="space-y-3">
           <div className="flex items-center gap-3 text-primary">
-            <ShieldAlert className="w-5 h-5" />
-            <span className="text-[11px] font-medium uppercase tracking-[0.3em]">System Oversight</span>
+            <LayoutDashboard className="w-5 h-5" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.3em]">Operational Oversight</span>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground uppercase">Master Command Center</h1>
-          <p className="text-muted-foreground font-normal text-sm">Enterprise-wide surveillance of BPO operations and agent logs</p>
+          <h1 className="text-4xl font-semibold tracking-tight text-foreground uppercase">Master Command Center</h1>
+          <p className="text-muted-foreground font-normal text-sm leading-relaxed max-w-2xl">Enterprise-wide monitoring and lifecycle management of BPO call records and agent activities.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
-            className="bg-card border-border font-medium text-xs uppercase tracking-widest shadow-sm h-11 px-6" 
+            className="bg-card border-border font-medium text-[10px] uppercase tracking-widest shadow-sm h-11 px-8 rounded-xl" 
             onClick={handleExport}
             disabled={isExporting}
           >
-            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2 text-primary" />}
             {isExporting ? "Exporting..." : "Export Audit Log"}
           </Button>
         </div>
       </header>
 
-      <div className="space-y-10">
+      <div className="space-y-12">
         {/* Top Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <StatCard title="System Volume" value={stats.total} icon={<BarChart3 className="w-4 h-4" />} color="primary" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard title="System Volume" value={stats.total} icon={<Database className="w-4 h-4" />} color="primary" />
           <StatCard title="Pending Queue" value={stats.pending} icon={<Clock className="h-4 w-4" />} color="slate" />
           <StatCard title="Operational" value={stats.active} icon={<Activity className="h-4 w-4" />} color="amber" />
           <StatCard title="Total Archived" value={stats.closed} icon={<CheckCircle2 className="h-4 w-4" />} color="emerald" />
         </div>
 
-        {/* Analytics Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Status Distribution */}
-          <Card className="shadow-sm border-border bg-card">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <PieChartIcon className="w-4 h-4 text-primary" />
-                <CardTitle className="text-sm font-semibold uppercase tracking-tight">Status Distribution</CardTitle>
+        {/* Analytics Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <Card className="shadow-2xl shadow-black/5 border-border bg-card rounded-2xl overflow-hidden">
+            <CardHeader className="pb-6 border-b border-border/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <PieChartIcon className="w-4 h-4 text-primary" />
+                </div>
+                <CardTitle className="text-sm font-semibold uppercase tracking-widest">Queue Composition</CardTitle>
               </div>
-              <CardDescription className="text-[10px]">Current queue composition</CardDescription>
             </CardHeader>
-            <CardContent className="h-[280px]">
+            <CardContent className="h-[300px] pt-8">
               {analyticsData.statusData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -268,161 +266,177 @@ export default function AdminDashboard() {
                       data={analyticsData.statusData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
+                      innerRadius={70}
+                      outerRadius={95}
+                      paddingAngle={8}
                       dataKey="value"
                     >
                       {analyticsData.statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                       ))}
                     </Pie>
-                    <RechartsTooltip />
+                    <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-full flex items-center justify-center text-muted-foreground text-[10px] uppercase tracking-widest">No status data</div>
+                <div className="h-full flex items-center justify-center text-muted-foreground text-[10px] uppercase tracking-widest">Awaiting System Data...</div>
               )}
             </CardContent>
           </Card>
 
-          {/* Volume Over Time */}
-          <Card className="shadow-sm border-border bg-card">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <CardTitle className="text-sm font-semibold uppercase tracking-tight">System Traffic</CardTitle>
+          <Card className="shadow-2xl shadow-black/5 border-border bg-card rounded-2xl overflow-hidden">
+            <CardHeader className="pb-6 border-b border-border/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                </div>
+                <CardTitle className="text-sm font-semibold uppercase tracking-widest">Traffic Trends</CardTitle>
               </div>
-              <CardDescription className="text-[10px]">Calls logged over last 7 days</CardDescription>
             </CardHeader>
-            <CardContent className="h-[280px]">
+            <CardContent className="h-[300px] pt-8">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={analyticsData.timeData}>
+                <AreaChart data={analyticsData.timeData} margin={{ left: -20, right: 10 }}>
                   <defs>
                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
                       <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} />
-                  <YAxis fontSize={10} axisLine={false} tickLine={false} />
-                  <RechartsTooltip />
-                  <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorCount)" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                  <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                  <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorCount)" />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Agent Performance */}
-          <Card className="shadow-sm border-border bg-card">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <UsersIcon className="w-4 h-4 text-primary" />
-                <CardTitle className="text-sm font-semibold uppercase tracking-tight">Top Performers</CardTitle>
+          <Card className="shadow-2xl shadow-black/5 border-border bg-card rounded-2xl overflow-hidden">
+            <CardHeader className="pb-6 border-b border-border/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <UsersIcon className="w-4 h-4 text-primary" />
+                </div>
+                <CardTitle className="text-sm font-semibold uppercase tracking-widest">Agent Throughput</CardTitle>
               </div>
-              <CardDescription className="text-[10px]">Calls handled by top agents</CardDescription>
             </CardHeader>
-            <CardContent className="h-[280px]">
+            <CardContent className="h-[300px] pt-8">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analyticsData.agentData} layout="vertical" margin={{ left: -10, right: 20 }}>
+                <BarChart data={analyticsData.agentData} layout="vertical" margin={{ left: -10, right: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" opacity={0.5} />
                   <XAxis type="number" hide />
-                  <YAxis dataKey="agent" type="category" fontSize={10} width={70} axisLine={false} tickLine={false} />
-                  <RechartsTooltip />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={20} />
+                  <YAxis dataKey="agent" type="category" fontSize={10} width={80} axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <RechartsTooltip cursor={{ fill: 'hsl(var(--muted)/0.1)' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} barSize={24} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>
 
-        {/* Controls & Logs */}
-        <div className="bg-card p-6 rounded-2xl shadow-xl shadow-black/5 border border-border flex flex-col lg:flex-row gap-6 items-center">
+        {/* Global Controls */}
+        <div className="bg-card p-8 rounded-3xl shadow-2xl shadow-black/5 border border-border/50 flex flex-col lg:flex-row gap-8 items-center">
           <div className="relative flex-1 w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
-              placeholder="Search master logs by customer, agent, or incident..." 
-              className="pl-12 h-12 bg-muted/20 border-border focus-visible:ring-primary font-normal text-sm"
+              placeholder="Filter master logs by customer identity, agent ID, or incident profile..." 
+              className="pl-12 h-14 bg-muted/10 border-border focus-visible:ring-primary font-normal text-sm rounded-2xl"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex gap-3 w-full lg:w-auto">
+          <div className="flex gap-4 w-full lg:w-auto">
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full lg:w-[220px] h-12 bg-muted/20 border-border font-medium text-[10px] uppercase tracking-widest">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Status Filter" />
+              <SelectTrigger className="w-full lg:w-[260px] h-14 bg-muted/10 border-border font-medium text-[10px] uppercase tracking-[0.2em] rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <Filter className="w-4 h-4 text-primary" />
+                  <SelectValue placeholder="Lifecycle Filter" />
+                </div>
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">ALL LOGS</SelectItem>
+              <SelectContent className="rounded-2xl border-border">
+                <SelectItem value="all">ALL SYSTEM LOGS</SelectItem>
                 <SelectItem value="Pending">PENDING QUEUE</SelectItem>
-                <SelectItem value="In Progress">IN PROGRESS</SelectItem>
-                <SelectItem value="Completed">ARCHIVED</SelectItem>
+                <SelectItem value="In Progress">ACTIVE SESSIONS</SelectItem>
+                <SelectItem value="Completed">ARCHIVED RECORDS</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        <Card className="border-none shadow-2xl shadow-black/10 overflow-hidden ring-1 ring-border bg-card">
-          <CardHeader className="bg-muted/5 border-b px-8 py-6 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold uppercase tracking-tight">Enterprise Record Stream</CardTitle>
-              <CardDescription className="text-xs text-muted-foreground font-normal">Real-time synchronization of all agent activities</CardDescription>
+        {/* Data Stream */}
+        <Card className="border-none shadow-2xl shadow-black/10 overflow-hidden ring-1 ring-border bg-card rounded-3xl">
+          <CardHeader className="bg-muted/5 border-b px-10 py-8 flex flex-row items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-xl font-semibold uppercase tracking-tight">Enterprise Record Stream</CardTitle>
+              <CardDescription className="text-xs text-muted-foreground font-normal tracking-wide">Real-time synchronization of global support infrastructure activities.</CardDescription>
+            </div>
+            <div className="hidden md:block">
+              <Badge variant="secondary" className="bg-muted px-4 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                LIVE STATUS: {processedCalls.length} ACTIVE LOGS
+              </Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border/50">
               {callsLoading ? (
-                <div className="flex flex-col items-center justify-center py-40 gap-4">
-                  <Loader2 className="animate-spin text-primary w-10 h-10" />
-                  <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-muted-foreground">Synchronizing Master Feed...</p>
+                <div className="flex flex-col items-center justify-center py-48 gap-6">
+                  <Loader2 className="animate-spin text-primary w-12 h-12" />
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-muted-foreground">Synchronizing Master Feed...</p>
                 </div>
               ) : processedCalls.map((call) => (
-                <div key={call.id} className="p-8 hover:bg-muted/5 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-8 group">
-                  <div className="space-y-3 flex-1">
-                    <div className="flex items-center gap-4">
-                      <span className="font-semibold text-xl text-foreground tracking-tight">{call.customerName}</span>
+                <div key={call.id} className="p-10 hover:bg-muted/10 transition-all duration-300 flex flex-col lg:flex-row lg:items-center justify-between gap-10 group">
+                  <div className="space-y-4 flex-1">
+                    <div className="flex items-center gap-6">
+                      <span className="font-semibold text-2xl text-foreground tracking-tight">{call.customerName}</span>
                       {getStatusBadge(call.status)}
                     </div>
-                    <p className="text-sm text-muted-foreground font-normal leading-relaxed max-w-4xl">{call.issue}</p>
-                    <div className="flex items-center gap-6 text-[10px] text-muted-foreground font-medium uppercase tracking-[0.2em] pt-2">
-                      <span className="bg-muted/50 px-3 py-1 rounded-md">Agent: {call.assignedAgent}</span>
-                      <span className="border-l pl-6">Timestamp: {call.createdAt?.toDate?.().toLocaleString() || 'N/A'}</span>
+                    <p className="text-[15px] text-muted-foreground font-normal leading-relaxed max-w-5xl">{call.issue}</p>
+                    <div className="flex items-center gap-8 text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.2em] pt-4">
+                      <div className="flex items-center gap-2 bg-muted/40 px-4 py-2 rounded-xl">
+                        <UsersIcon className="w-3 h-3 text-primary" />
+                        <span>AGENT: {call.assignedAgent}</span>
+                      </div>
+                      <div className="flex items-center gap-2 border-l border-border pl-8">
+                        <Clock className="w-3 h-3" />
+                        <span>TIMESTAMP: {call.createdAt?.toDate?.().toLocaleString() || 'N/A'}</span>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4 shrink-0">
                     {call.status === 'Pending' && (
                       <Button 
-                        className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 font-medium text-[10px] tracking-widest px-6 h-10"
+                        className="bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20 font-semibold text-[10px] tracking-widest px-8 h-12 rounded-2xl"
                         onClick={() => updateStatus(call.id, 'In Progress')}
                       >
-                        <PlayCircle className="w-3 h-3 mr-2" /> START PROCESS
+                        <PlayCircle className="w-4 h-4 mr-2" /> INITIATE PROCESS
                       </Button>
                     )}
                     {call.status === 'In Progress' && (
                       <Button 
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 font-medium text-[10px] tracking-widest px-6 h-10"
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-500/20 font-semibold text-[10px] tracking-widest px-8 h-12 rounded-2xl"
                         onClick={() => updateStatus(call.id, 'Completed')}
                       >
-                        <CheckCircle2 className="w-3 h-3 mr-2" /> ARCHIVE RECORD
+                        <CheckCircle2 className="w-4 h-4 mr-2" /> FINALIZE RECORD
                       </Button>
                     )}
                     {call.status === 'Completed' && (
-                      <div className="flex items-center gap-2 text-emerald-600 font-medium text-[10px] tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-6 py-2.5 rounded-xl">
-                        <CheckCircle2 className="w-3 h-3" /> AUDIT VERIFIED
+                      <div className="flex items-center gap-3 text-emerald-600 font-semibold text-[10px] tracking-widest bg-emerald-500/10 border border-emerald-500/20 px-8 py-3.5 rounded-2xl">
+                        <CheckCircle2 className="w-4 h-4" /> COMPLIANCE VERIFIED
                       </div>
                     )}
                   </div>
                 </div>
               ))}
               {!callsLoading && processedCalls.length === 0 && (
-                <div className="text-center py-40 text-muted-foreground flex flex-col items-center space-y-4">
-                  <div className="p-5 bg-muted rounded-full opacity-50">
-                    <Search className="w-10 h-10 text-muted-foreground" />
+                <div className="text-center py-48 text-muted-foreground flex flex-col items-center space-y-6">
+                  <div className="p-8 bg-muted/20 rounded-full border border-dashed border-border">
+                    <Search className="w-12 h-12 text-muted-foreground/50" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-foreground font-medium uppercase tracking-widest text-sm">No Matches Detected</p>
-                    <p className="text-xs font-normal">Your current filters yielded zero results from the master logs.</p>
+                  <div className="space-y-2">
+                    <p className="text-foreground font-semibold uppercase tracking-[0.2em] text-sm">No Matching Logs Detected</p>
+                    <p className="text-xs font-normal tracking-wide">The current system filters yielded zero results from the master stream.</p>
                   </div>
                 </div>
               )}
@@ -443,13 +457,13 @@ function StatCard({ title, value, icon, color }: { title: string, value: number,
   }
   
   return (
-    <Card className="border shadow-sm bg-card overflow-hidden group">
-      <CardHeader className="flex flex-row items-center justify-between pb-4">
-        <CardTitle className="text-[10px] font-medium uppercase tracking-[0.3em] text-muted-foreground">{title}</CardTitle>
-        <div className={`p-2 rounded-lg border ${colorMap[color]} transition-transform group-hover:scale-105`}>{icon}</div>
+    <Card className="border shadow-2xl shadow-black/5 bg-card overflow-hidden group rounded-3xl transition-all duration-300 hover:scale-[1.02]">
+      <CardHeader className="flex flex-row items-center justify-between pb-6 pt-8 px-8">
+        <CardTitle className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{title}</CardTitle>
+        <div className={`p-3 rounded-2xl border ${colorMap[color]} transition-transform group-hover:rotate-6`}>{icon}</div>
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold text-foreground tracking-tight">{value}</div>
+      <CardContent className="px-8 pb-8">
+        <div className="text-4xl font-semibold text-foreground tracking-tighter">{value}</div>
       </CardContent>
     </Card>
   )
