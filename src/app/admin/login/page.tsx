@@ -39,14 +39,15 @@ export default function AdminLoginPage() {
     e.preventDefault()
     setError(null)
     
-    if (email.toLowerCase() !== 'admin@gmail.com') {
-      setError("This terminal is strictly reserved for the Master Administrator (admin@gmail.com).")
+    const trimmedEmail = email.trim().toLowerCase()
+    if (trimmedEmail !== 'admin@gmail.com') {
+      setError("Unauthorized Identity. This console is strictly reserved for the Master Administrator.")
       return
     }
 
     setLoading(true)
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      await signInWithEmailAndPassword(auth, trimmedEmail, password)
       
       toast({
         title: "Access Authorized",
@@ -55,7 +56,10 @@ export default function AdminLoginPage() {
       
       router.push("/admin/dashboard")
     } catch (err: any) {
-      setError("Unauthorized credentials. If you haven't set up the admin account, please register admin@gmail.com at the Agent Portal.")
+      console.error("Admin Login Error:", err)
+      setError(err.code === 'auth/wrong-password' 
+        ? "Access key rejected. Please verify your administrative credentials." 
+        : "Identity mismatch. Ensure admin@gmail.com is registered at the portal.")
     } finally {
       setLoading(false)
     }
@@ -74,10 +78,10 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-md shadow-2xl border-none ring-1 ring-slate-200">
         <CardHeader className="text-center space-y-2 pb-8">
           <div className="flex justify-between items-center mb-4">
-            <Button variant="ghost" size="sm" className="text-slate-500 hover:text-primary" onClick={() => router.push('/user/login')}>
+            <Button variant="ghost" size="sm" className="text-slate-500 hover:text-primary h-8 px-2" onClick={() => router.push('/user/login')}>
               <ChevronLeft className="w-4 h-4 mr-1" /> Agent Portal
             </Button>
-            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 uppercase tracking-widest text-[10px] font-black">Secure Terminal</Badge>
+            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 uppercase tracking-[0.2em] text-[10px] font-black">Secure Terminal</Badge>
           </div>
           <div className="flex justify-center">
             <div className="p-4 bg-primary/10 rounded-2xl">
@@ -90,7 +94,7 @@ export default function AdminLoginPage() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             {error && (
-              <Alert variant="destructive" className="bg-destructive/5 text-destructive border-destructive/20">
+              <Alert variant="destructive" className="bg-destructive/5 text-destructive border-destructive/20 animate-in fade-in slide-in-from-top-2">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Access Denied</AlertTitle>
                 <AlertDescription className="text-xs">

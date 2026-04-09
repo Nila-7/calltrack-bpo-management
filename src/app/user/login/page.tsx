@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PhoneCall, Lock, Loader2, KeyRound, Mail } from "lucide-react"
+import { PhoneCall, Lock, Loader2, KeyRound, Mail, ShieldAlert } from "lucide-react"
 import { useAuth, useUser } from "@/firebase"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -36,23 +36,23 @@ export default function UserLoginPage() {
     e.preventDefault()
     setLoading(true)
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      const trimmedEmail = email.trim().toLowerCase()
+      await signInWithEmailAndPassword(auth, trimmedEmail, password)
       
       toast({
-        title: "Access Granted",
-        description: `Welcome back, agent.`,
+        title: "Access Authorized",
+        description: `Identity verified. Synchronizing dashboard...`,
       })
 
-      if (email.toLowerCase() === 'admin@gmail.com') {
-        router.push("/admin/dashboard")
-      } else {
-        router.push("/user/dashboard")
-      }
+      // The useEffect will handle the redirect based on email
     } catch (error: any) {
+      console.error("Login Error:", error)
       toast({
         variant: "destructive",
         title: "Authentication Failed",
-        description: "Invalid email or password. Please try again.",
+        description: error.code === 'auth/wrong-password' 
+          ? "Incorrect password. Please try again." 
+          : "Invalid credentials. Ensure your account is registered.",
       })
     } finally {
       setLoading(false)
@@ -97,9 +97,7 @@ export default function UserLoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="password">Password</Label>
-              </div>
+              <Label htmlFor="password">Security Key</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input 
@@ -121,10 +119,17 @@ export default function UserLoginPage() {
         </form>
         <CardFooter className="flex flex-col space-y-4 text-center border-t bg-slate-50/50 pt-6">
           <Button variant="link" className="text-sm font-medium text-slate-600" onClick={() => router.push('/user/signup')}>
-            Don't have an account? <span className="text-primary ml-1">Create Agent ID</span>
+            Need an identity? <span className="text-primary ml-1 font-bold">Register Agent ID</span>
           </Button>
-          <div className="flex justify-center gap-4 text-xs text-slate-400 font-bold uppercase tracking-widest">
-            <button type="button" onClick={() => router.push('/admin/login')} className="hover:text-primary transition-colors underline">Admin Login</button>
+          <div className="flex justify-center">
+            <button 
+              type="button" 
+              onClick={() => router.push('/admin/login')} 
+              className="flex items-center gap-1.5 text-[10px] text-slate-400 hover:text-primary font-black uppercase tracking-widest transition-colors"
+            >
+              <ShieldAlert className="w-3 h-3" />
+              Administrative Login
+            </button>
           </div>
         </CardFooter>
       </Card>

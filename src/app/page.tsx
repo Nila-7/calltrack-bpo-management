@@ -13,8 +13,10 @@ export default function RootRedirect() {
   useEffect(() => {
     if (!isUserLoading) {
       if (!user) {
+        // No session, go to agent login by default
         router.push("/user/login")
       } else {
+        // Active session, route based on identity
         if (user.email?.toLowerCase() === 'admin@gmail.com') {
           router.push("/admin/dashboard")
         } else {
