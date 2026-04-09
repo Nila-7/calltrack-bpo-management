@@ -21,7 +21,7 @@ import {
 } from "lucide-react"
 import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
 import { signOut } from "firebase/auth"
-import { collection, addDoc, serverTimestamp, query, where, orderBy } from "firebase/firestore"
+import { collection, addDoc, serverTimestamp, query, where } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 
 export default function UserDashboard() {
@@ -37,19 +37,17 @@ export default function UserDashboard() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    // Wait for authentication state to be determined before redirecting
     if (!isUserLoading && !user) {
       router.push('/')
     }
   }, [user, isUserLoading, router])
 
-  // Gate query to ensure user is authenticated and loading state is finished
   const callsQuery = useMemoFirebase(() => {
     if (!user || isUserLoading) return null
+    // Simplified query to avoid composite index requirements during permission debugging
     return query(
       collection(db, 'calls'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', user.uid)
     )
   }, [db, user, isUserLoading])
 
@@ -73,7 +71,7 @@ export default function UserDashboard() {
       setAgent("")
       toast({ title: "Call Recorded", description: "The call record has been added to the queue." })
     } catch (err: any) {
-      // Errors are handled by the global error listener
+      // Errors handled globally
     } finally {
       setSubmitting(false)
     }

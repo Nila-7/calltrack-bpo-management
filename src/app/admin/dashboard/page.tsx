@@ -16,7 +16,7 @@ import {
 } from "lucide-react"
 import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from "@/firebase"
 import { signOut } from "firebase/auth"
-import { collection, doc, updateDoc, query, orderBy, limit } from "firebase/firestore"
+import { collection, doc, updateDoc, query, limit } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 
 export default function AdminDashboard() {
@@ -26,32 +26,28 @@ export default function AdminDashboard() {
   const { user, isUserLoading } = useUser()
   const { toast } = useToast()
 
-  // Fetch profile to verify admin role
   const profileRef = useMemoFirebase(() => {
     if (!user) return null;
     return doc(db, 'userProfiles', user.uid);
   }, [db, user]);
   const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
 
-  // Robust admin check
   const isAdmin = user?.email === 'admin@gmail.com' || profile?.role === 'Admin';
 
   useEffect(() => {
-    // Wait for all loading states before making a routing decision
     if (!isUserLoading && !profileLoading) {
       if (!user) {
         router.push('/')
       } else if (!isAdmin) {
-        // If they logged in as a regular agent, send them to the agent portal
         router.push('/user/dashboard')
       }
     }
   }, [user, isUserLoading, profileLoading, isAdmin, router])
 
-  // Gate the query: Only run if we are 100% sure the user is an authorized admin
   const allCallsQuery = useMemoFirebase(() => {
     if (!user || isUserLoading || profileLoading || !isAdmin) return null;
-    return query(collection(db, 'calls'), orderBy('createdAt', 'desc'), limit(100));
+    // Simplified query to avoid index requirements while debugging permissions
+    return query(collection(db, 'calls'), limit(100));
   }, [db, user, isAdmin, isUserLoading, profileLoading])
 
   const { data: calls, isLoading: callsLoading } = useCollection(allCallsQuery)
@@ -62,7 +58,7 @@ export default function AdminDashboard() {
       await updateDoc(docRef, { status });
       toast({ title: "Status Updated", description: `Call is now ${status}.` });
     } catch (err: any) {
-      // Permission errors are handled by the global listener
+      // Permission errors handled globally
     }
   }
 
@@ -86,7 +82,6 @@ export default function AdminDashboard() {
     )
   }
 
-  // Double check admin status before rendering sensitive UI
   if (!isAdmin) return null;
 
   return (
