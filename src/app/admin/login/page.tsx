@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
     setError(null)
     
     if (email.toLowerCase() !== 'admin@gmail.com') {
-      setError("This terminal is strictly reserved for the System Administrator (admin@gmail.com).")
+      setError("This terminal is strictly reserved for the Master Administrator (admin@gmail.com).")
       return
     }
 
@@ -49,13 +49,13 @@ export default function AdminLoginPage() {
       await signInWithEmailAndPassword(auth, email, password)
       
       toast({
-        title: "Admin Authorized",
-        description: "Access granted to the Command Center.",
+        title: "Access Authorized",
+        description: "Welcome back, System Administrator.",
       })
       
       router.push("/admin/dashboard")
-    } catch (error: any) {
-      setError("Invalid administrator credentials. If you haven't set up the admin account, please register admin@gmail.com at the Agent Portal.")
+    } catch (err: any) {
+      setError("Unauthorized credentials. If you haven't set up the admin account, please register admin@gmail.com at the Agent Portal.")
     } finally {
       setLoading(false)
     }
@@ -92,7 +92,7 @@ export default function AdminLoginPage() {
             {error && (
               <Alert variant="destructive" className="bg-destructive/5 text-destructive border-destructive/20">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Authorization Error</AlertTitle>
+                <AlertTitle>Access Denied</AlertTitle>
                 <AlertDescription className="text-xs">
                   {error}
                 </AlertDescription>
@@ -114,7 +114,7 @@ export default function AdminLoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" title="Standard Admin Password is admin@123" className="text-xs font-bold uppercase tracking-wider text-slate-500">Access Key</Label>
+              <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-slate-500">Access Key</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input 

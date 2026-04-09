@@ -51,10 +51,10 @@ export default function UserSignupPage() {
       })
 
       toast({
-        title: isAdminEmail ? "Admin Account Initialized" : "Agent Registration Complete",
+        title: isAdminEmail ? "Admin Authorized" : "Agent Identity Created",
         description: isAdminEmail 
-          ? "The System Administrator has been successfully registered." 
-          : "Your agent identity has been provisioned.",
+          ? "The System Administrator has been initialized." 
+          : "Your account is now active.",
       })
       
       if (isAdminEmail) {
@@ -63,10 +63,15 @@ export default function UserSignupPage() {
         router.push('/user/dashboard')
       }
     } catch (error: any) {
+      let message = error.message;
+      if (error.code === 'auth/email-already-in-use') {
+        message = "This identity is already active. Please sign in to the Portal."
+      }
+      
       toast({
         variant: "destructive",
-        title: "Registration Failed",
-        description: error.message,
+        title: "Registration Interrupted",
+        description: message,
       })
     } finally {
       setLoading(false)
@@ -111,7 +116,7 @@ export default function UserSignupPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" title="Set your password (e.g. admin@123)" className="text-xs font-bold uppercase tracking-wider text-slate-500">Security Access Code</Label>
+              <Label htmlFor="password" title="Set your password" className="text-xs font-bold uppercase tracking-wider text-slate-500">Security Access Code</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input 
@@ -124,14 +129,13 @@ export default function UserSignupPage() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              <p className="text-[10px] text-slate-400 italic font-medium">Minimum 6 characters required for encryption standards.</p>
             </div>
 
             {email.toLowerCase() === 'admin@gmail.com' && (
               <Alert className="bg-amber-50 border-amber-200">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-xs text-amber-700 font-medium">
-                  Initializing the Master Administrator identity. After signup, you will be redirected to the Admin Console.
+                  Initializing System Administrator. If already registered, please navigate to the Login page.
                 </AlertDescription>
               </Alert>
             )}
