@@ -26,9 +26,10 @@ export default function DocumentViewer() {
   const [viewMode, setViewMode] = useState<'original' | 'decoy'>('original')
   const [suspiciousMode, setSuspiciousMode] = useState(false)
 
+  // Corrected collection name to 'userProfiles' for consistency across the app
   const profileRef = useMemoFirebase(() => {
     if (!user) return null;
-    return doc(db, 'users', user.uid);
+    return doc(db, 'userProfiles', user.uid);
   }, [db, user]);
   const { data: profile } = useDoc(profileRef);
 
@@ -67,7 +68,7 @@ export default function DocumentViewer() {
       userId: user.uid,
       username: profile.username || 'N/A',
       email: user.email || 'N/A',
-      role: profile.role.toLowerCase() as 'admin' | 'user',
+      role: (profile.role?.toLowerCase() as 'admin' | 'user') || 'user',
       action: 'Decoy Served',
       documentId: id,
       documentName: document.fileName,

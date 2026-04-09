@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -32,15 +31,18 @@ export default function AdminLoginPage() {
       let userCredential;
       if (isSignUp) {
         userCredential = await createUserWithEmailAndPassword(auth, email, password)
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
+        // Corrected collection name to 'userProfiles' for consistency across the app
+        await setDoc(doc(db, 'userProfiles', userCredential.user.uid), {
           email,
           role: 'Admin',
           createdAt: new Date().toISOString()
         })
         await logActivity(db, {
           userId: userCredential.user.uid,
-          userEmail: email,
-          action: 'User registered',
+          username: email.split('@')[0],
+          email: email,
+          role: 'admin',
+          action: 'User Created',
           status: 'Success'
         })
       } else {
@@ -49,8 +51,10 @@ export default function AdminLoginPage() {
 
       await logActivity(db, {
         userId: userCredential.user.uid,
-        userEmail: email,
-        action: 'Admin authenticated',
+        username: email.split('@')[0],
+        email: email,
+        role: 'admin',
+        action: 'Admin Login',
         status: 'Success'
       })
       
@@ -106,7 +110,7 @@ export default function AdminLoginPage() {
               <Input 
                 id="email" 
                 type="email" 
-                placeholder="admin@isx.com" 
+                placeholder="admin@gmail.com" 
                 required 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
