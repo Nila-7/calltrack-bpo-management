@@ -1,16 +1,10 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function isSignedIn() {
       return request.auth != null;
     }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
+    
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'admin@gmail.com' || 
@@ -19,26 +13,7 @@ service cloud.firestore {
     }
 
     match /userProfiles/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isAdmin();
-    }
-
-    match /activity_logs/{logId} {
-      allow get: if isAdmin() || (resource != null && resource.data.userId == request.auth.uid);
-      allow list: if isAdmin();
-      allow create: if isSignedIn();
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    match /users/{userId}/documents/{documentId} {
-      allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow read, write: if request.auth.uid == userId || isAdmin();
     }
 
     match /calls/{callId} {

@@ -1,140 +1,5 @@
-
 {
   "entities": {
-    "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserProfile",
-      "type": "object",
-      "description": "Stores user-specific information, including their role within the IntelliSecureX system.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserProfile entity."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address, used for authentication and contact.",
-          "format": "email"
-        },
-        "role": {
-          "type": "string",
-          "description": "The access role of the user within the system (e.g., 'Admin', 'User')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the user profile was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the user profile was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "email",
-        "role",
-        "createdAt"
-      ]
-    },
-    "Document": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Document",
-      "type": "object",
-      "description": "Stores metadata about a document uploaded to the IntelliSecureX system. The actual document content is stored in Firebase Storage.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Document entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The original name of the uploaded document."
-        },
-        "fileType": {
-          "type": "string",
-          "description": "The type of the document (e.g., 'TXT', 'PDF', 'DOCX')."
-        },
-        "storagePath": {
-          "type": "string",
-          "description": "The path or URI to the original document file in Firebase Storage."
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "Reference to the UserProfile entity of the user who uploaded this document. (Relationship: UserProfile 1:N Document)"
-        },
-        "uploadedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the document was uploaded.",
-          "format": "date-time"
-        },
-        "decoyGeneratedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the decoy version of the document was last generated or updated.",
-          "format": "date-time"
-        },
-        "originalContentTextPath": {
-          "type": "string",
-          "description": "Path to the extracted plain text content of the original document in Firebase Storage, used for NLP processing."
-        },
-        "decoyContentTextPath": {
-          "type": "string",
-          "description": "Path to the plain text content of the decoy document in Firebase Storage."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "fileType",
-        "storagePath",
-        "ownerId",
-        "uploadedAt"
-      ]
-    },
-    "ActivityLog": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ActivityLog",
-      "type": "object",
-      "description": "Records significant user and system activities within the IntelliSecureX platform for monitoring and auditing purposes.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ActivityLog entry."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile entity of the user who performed the action, if applicable. (Relationship: UserProfile 1:N ActivityLog)"
-        },
-        "actionType": {
-          "type": "string",
-          "description": "The type of action performed (e.g., 'User authenticated', 'Document uploaded', 'Decoy activated', 'Unauthorized access attempt')."
-        },
-        "documentId": {
-          "type": "string",
-          "description": "Reference to the Document entity involved in the action, if applicable. (Relationship: Document 1:N ActivityLog)"
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp indicating when the action occurred.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The outcome or state of the action (e.g., 'success', 'failed', 'info', 'warning')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A more detailed textual description of the activity."
-        }
-      },
-      "required": [
-        "id",
-        "actionType",
-        "timestamp",
-        "status"
-      ]
-    },
     "CallRecord": {
       "title": "CallRecord",
       "description": "Represents a call record in the BPO Call Center System.",
@@ -148,81 +13,43 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["customerName", "issue", "status", "userId", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["Admin", "User"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role", "createdAt"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password"]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/userProfiles/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores user-specific information, including their role (Admin/User).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/activity_logs/{logId}",
-        "definition": {
-          "entityName": "ActivityLog",
-          "schema": {
-            "$ref": "#/backend/entities/ActivityLog"
-          },
-          "description": "Records significant user and system activities.",
-          "params": [
-            {
-              "name": "logId",
-              "description": "The unique identifier for an activity log entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/documents/{documentId}",
-        "definition": {
-          "entityName": "Document",
-          "schema": {
-            "$ref": "#/backend/entities/Document"
-          },
-          "description": "Stores metadata for documents uploaded by a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the document owner."
-            },
-            {
-              "name": "documentId",
-              "description": "The unique identifier for the document entry."
-            }
-          ]
-        }
-      },
-      {
         "path": "/calls/{callId}",
         "definition": {
           "entityName": "CallRecord",
-          "schema": {
-            "$ref": "#/backend/entities/CallRecord"
-          },
-          "description": "Stores call center records for the BPO module.",
+          "schema": { "$ref": "#/backend/entities/CallRecord" },
+          "description": "Stores all call center records.",
           "params": [
-            {
-              "name": "callId",
-              "description": "The unique identifier for the call record."
-            }
+            { "name": "callId", "description": "Unique call record ID" }
+          ]
+        }
+      },
+      {
+        "path": "/userProfiles/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": { "$ref": "#/backend/entities/UserProfile" },
+          "description": "Stores user roles and profiles.",
+          "params": [
+            { "name": "userId", "description": "Firebase Auth UID" }
           ]
         }
       }

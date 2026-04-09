@@ -1,294 +1,185 @@
-
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { 
-  FileText, 
-  Trash2, 
-  Eye, 
-  Shield, 
+  PhoneCall, 
+  Plus, 
   LogOut, 
-  FolderLock,
-  Search,
-  MoreVertical,
-  Plus,
+  Clock, 
+  CheckCircle2, 
+  PlayCircle,
   Loader2,
+  ListTodo,
   User as UserIcon
 } from "lucide-react"
-import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from "@/firebase"
+import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
 import { signOut } from "firebase/auth"
-import { collection, addDoc, serverTimestamp, doc, deleteDoc } from "firebase/firestore"
-import { logActivity } from "@/services/activityLogger"
+import { collection, addDoc, serverTimestamp, query, where, orderBy } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
-import { detectEntities } from "@/lib/entityDetector"
-import { generateDecoyValue } from "@/lib/decoyGenerator"
 
 export default function UserDashboard() {
   const router = useRouter()
-  const { toast } = useToast()
   const auth = useAuth()
   const db = useFirestore()
   const { user, isUserLoading } = useUser()
+  const { toast } = useToast()
 
-  const [uploading, setUploading] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-
-  const profileRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user]);
-  const { data: profile } = useDoc(profileRef);
+  const [customerName, setCustomerName] = useState("")
+  const [issue, setIssue] = useState("")
+  const [agent, setAgent] = useState("")
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/')
-    }
+    if (!isUserLoading && !user) router.push('/')
   }, [user, isUserLoading, router])
 
-  const docsQuery = useMemoFirebase(() => {
+  const callsQuery = useMemoFirebase(() => {
     if (!user) return null
-    return collection(db, 'users', user.uid, 'documents')
+    return query(
+      collection(db, 'calls'),
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    )
   }, [db, user])
-  
-  const { data: docs, isLoading: docsLoading } = useCollection(docsQuery)
 
-  const handleLogout = async () => {
-    if (user && profile) {
-      await logActivity(db, {
-        userId: user.uid,
-        username: profile.username || 'N/A',
-        email: user.email || 'N/A',
-        role: 'user',
-        action: 'User Logout',
-        status: 'Success'
-      })
-    }
-    await signOut(auth)
-    router.push('/')
-  }
+  const { data: calls, isLoading: callsLoading } = useCollection(callsQuery)
 
-  const handleDelete = async (docId: string, fileName: string) => {
-    if (!user || !profile) return
+  const handleAddCall = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+    setSubmitting(true)
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'documents', docId))
-      await logActivity(db, {
+      await addDoc(collection(db, 'calls'), {
+        customerName,
+        issue,
+        assignedAgent: agent || user.email,
+        status: 'Waiting',
         userId: user.uid,
-        username: profile.username || 'N/A',
-        email: user.email || 'N/A',
-        role: 'user',
-        action: 'Document Deleted',
-        documentName: fileName,
-        status: 'Warning'
-      })
-      toast({
-        title: "Document Deleted",
-        description: `${fileName} has been removed from the vault.`,
-      })
-    } catch (error) {
-      console.error("Delete failed", error)
-    }
-  }
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user || !profile) return
-
-    setUploading(true)
-    try {
-      const text = await file.text()
-      const entities = detectEntities(text)
-
-      const docRef = await addDoc(collection(db, 'users', user.uid, 'documents'), {
-        userId: user.uid,
-        fileName: file.name,
-        fileType: file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN',
-        content: text,
-        uploadDate: new Date().toISOString(),
-        securityStatus: 'Processed',
-        hasDecoy: true,
         createdAt: serverTimestamp()
       })
-
-      // Store classification results
-      for (const entity of entities) {
-        const decoy = generateDecoyValue(entity)
-        await addDoc(collection(db, 'users', user.uid, 'documents', docRef.id, 'entity_detections'), {
-          ...entity,
-          decoyValue: decoy,
-          createdAt: serverTimestamp()
-        })
-      }
-
-      await logActivity(db, {
-        userId: user.uid,
-        username: profile.username || 'N/A',
-        email: user.email || 'N/A',
-        role: 'user',
-        action: 'Document Uploaded',
-        documentId: docRef.id,
-        documentName: file.name,
-        status: 'Success'
-      })
-
-      toast({
-        title: "Secure Upload Complete",
-        description: `${file.name} is now protected with active deception.`,
-      })
-    } catch (error) {
-      console.error("Upload failed", error)
-      toast({
-        variant: "destructive",
-        title: "Upload Failed",
-        description: "Error processing document for deception.",
-      })
+      setCustomerName("")
+      setIssue("")
+      setAgent("")
+      toast({ title: "Call Recorded", description: "The call record has been added to the queue." })
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed to Add", description: err.message })
     } finally {
-      setUploading(false)
+      setSubmitting(false)
     }
   }
 
-  const filteredDocs = useMemo(() => {
-    return docs?.filter(doc => 
-      doc.fileName.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || []
-  }, [docs, searchTerm])
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Waiting': return <Badge variant="outline" className="text-slate-500 bg-slate-50 border-slate-200 font-bold"><Clock className="w-3 h-3 mr-1" /> WAITING</Badge>
+      case 'In Progress': return <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 font-bold"><PlayCircle className="w-3 h-3 mr-1" /> IN PROGRESS</Badge>
+      case 'Completed': return <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 font-bold"><CheckCircle2 className="w-3 h-3 mr-1" /> COMPLETED</Badge>
+      default: return <Badge variant="outline">{status}</Badge>
+    }
+  }
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
 
   return (
-    <div className="min-h-screen bg-[#F2F4F7]">
-      <nav className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm">
+    <div className="min-h-screen bg-slate-50">
+      <nav className="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
         <div className="flex items-center space-x-3">
-          <div className="p-1.5 bg-primary rounded-lg">
-            <Shield className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-bold text-xl text-secondary">IntelliSecureX</span>
+          <PhoneCall className="text-primary w-6 h-6" />
+          <span className="font-bold text-xl text-slate-900">BPO Agent Portal</span>
         </div>
-        
-        <div className="flex items-center space-x-6">
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input 
-              className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-full text-sm focus:ring-2 focus:ring-primary outline-none w-64"
-              placeholder="Search vault..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center space-x-2 mr-4">
-            <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none px-4 py-1.5">
-              <UserIcon className="w-4 h-4 mr-2" /> 
-              <span className="font-bold">{profile?.username || 'Loading...'}</span>
-            </Badge>
-          </div>
-          <Button variant="ghost" className="text-slate-500 hover:text-slate-900" onClick={handleLogout}>
+        <div className="flex items-center space-x-4">
+          <Badge variant="secondary" className="px-3 py-1 font-mono text-xs flex items-center">
+            <UserIcon className="w-3 h-3 mr-2" />
+            {user?.email}
+          </Badge>
+          <Button variant="ghost" size="sm" onClick={() => signOut(auth)}>
             <LogOut className="w-4 h-4 mr-2" /> Logout
           </Button>
         </div>
       </nav>
 
-      <main className="p-8 max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-secondary">Secure Workspace</h1>
-            <p className="text-muted-foreground text-sm">Dynamic deception-based document protection active</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <input
-              type="file"
-              id="file-upload"
-              className="hidden"
-              accept=".txt"
-              onChange={handleFileUpload}
-              disabled={uploading}
-            />
-            <Button 
-              className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" 
-              asChild
-              disabled={uploading}
-            >
-              <label htmlFor="file-upload" className="cursor-pointer flex items-center">
-                {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                {uploading ? "Analyzing Structure..." : "Secure Upload"}
-              </label>
-            </Button>
-          </div>
+      <main className="p-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-1">
+          <Card className="border-none shadow-sm sticky top-24">
+            <CardHeader>
+              <CardTitle className="text-lg">Log New Call</CardTitle>
+              <CardDescription>Enter details of the incoming customer request</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleAddCall} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Customer Name</Label>
+                  <Input 
+                    placeholder="Jane Doe" 
+                    required 
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Assigned Agent (Optional)</Label>
+                  <Input 
+                    placeholder="Agent Name" 
+                    value={agent}
+                    onChange={(e) => setAgent(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Issue Details</Label>
+                  <Textarea 
+                    placeholder="Describe the problem..." 
+                    required 
+                    className="min-h-[100px]"
+                    value={issue}
+                    onChange={(e) => setIssue(e.target.value)}
+                  />
+                </div>
+                <Button className="w-full bg-primary hover:bg-primary/90" disabled={submitting}>
+                  {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                  Submit Record
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDocs.map((doc) => (
-            <Card key={doc.id} className="group hover:ring-2 hover:ring-primary/20 transition-all border-none shadow-sm overflow-hidden bg-white">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-primary/5 transition-colors">
-                    <FileText className="w-8 h-8 text-primary/70" />
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center space-x-2 mb-2">
+            <ListTodo className="w-5 h-5 text-slate-400" />
+            <h2 className="text-xl font-bold text-slate-800 uppercase tracking-tight">Recent Records</h2>
+          </div>
+          
+          <div className="space-y-3">
+            {callsLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>
+            ) : calls?.map((call) => (
+              <Card key={call.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-5 flex justify-between items-start">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-slate-900">{call.customerName}</span>
+                      {getStatusBadge(call.status)}
+                    </div>
+                    <p className="text-sm text-slate-500 line-clamp-2">{call.issue}</p>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest pt-2">
+                      Agent: {call.assignedAgent} | {call.createdAt?.toDate?.().toLocaleString() || 'Syncing...'}
+                    </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </div>
-                <CardTitle className="text-lg font-semibold truncate mt-4">{doc.fileName}</CardTitle>
-                <CardDescription className="flex items-center text-xs uppercase tracking-wider font-medium text-slate-400">
-                  <FolderLock className="w-3 h-3 mr-1" /> Protected Document
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center text-sm text-slate-500 mb-6">
-                  <span>{new Date(doc.uploadDate).toLocaleDateString()}</span>
-                  <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-100 font-bold">DECEPTION READY</Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button 
-                    variant="default" 
-                    className="w-full bg-secondary hover:bg-secondary/90"
-                    onClick={() => {
-                      if (user && profile) {
-                        logActivity(db, {
-                          userId: user.uid,
-                          username: profile.username || 'N/A',
-                          email: user.email || 'N/A',
-                          role: 'user',
-                          action: 'Document Opened',
-                          documentId: doc.id,
-                          documentName: doc.fileName,
-                          status: 'Success'
-                        })
-                      }
-                      router.push(`/viewer/${doc.id}`)
-                    }}
-                  >
-                    <Eye className="w-4 h-4 mr-2" /> Open
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full text-destructive hover:bg-destructive/5 hover:text-destructive border-slate-200"
-                    onClick={() => handleDelete(doc.id, doc.fileName)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" /> Delete
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {filteredDocs.length === 0 && !docsLoading && (
-            <div className="col-span-full py-20 text-center">
-              <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-10 h-10 text-slate-300" />
+                </CardContent>
+              </Card>
+            ))}
+            {!callsLoading && calls?.length === 0 && (
+              <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed border-slate-100">
+                <p className="text-slate-400">No call records found. Start by logging a new call.</p>
               </div>
-              <h3 className="text-lg font-medium text-slate-600">No Protected Documents</h3>
-              <p className="text-muted-foreground max-w-xs mx-auto">Upload files to protect them with structure-preserving deception.</p>
-            </div>
-          )}
-
-          {docsLoading && (
-            <div className="col-span-full flex justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
     </div>

@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from "@/firebase/client-provider"
 
 export const metadata: Metadata = {
-  title: 'IntelliSecureX | Cyber-Deception Shield',
-  description: 'Enterprise-grade deception-based document protection.',
+  title: 'BPO Call Center System | Agent Portal',
+  description: 'Enterprise call management and tracking system.',
 };
 
 export default function RootLayout({
