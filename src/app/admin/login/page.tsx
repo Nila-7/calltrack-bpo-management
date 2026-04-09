@@ -57,9 +57,15 @@ export default function AdminLoginPage() {
       router.push("/admin/dashboard")
     } catch (err: any) {
       console.error("Admin Login Error:", err)
-      setError(err.code === 'auth/wrong-password' 
-        ? "Access key rejected. Please verify your administrative credentials." 
-        : "Identity mismatch. Ensure admin@gmail.com is registered at the portal.")
+      if (err.code === 'auth/user-not-found') {
+        setError("Admin identity not found. Please register admin@gmail.com at the Agent Portal first.")
+      } else if (err.code === 'auth/wrong-password') {
+        setError("Access key rejected. Please verify your administrative credentials.")
+      } else if (err.code === 'auth/invalid-credential') {
+        setError("Invalid credentials. Please verify your email and access key.")
+      } else {
+        setError("Identity verification failed. Ensure your account is registered.")
+      }
     } finally {
       setLoading(false)
     }

@@ -38,14 +38,23 @@ export default function UserSignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Normalize email: trim and lowercase
+    let normalizedEmail = email.trim().toLowerCase()
+    
+    // Auto-fix common typo for admin email
+    if (normalizedEmail.includes('admin@gamil.com')) {
+      normalizedEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
+      setEmail(normalizedEmail)
+    }
+
     setLoading(true)
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
       
-      const isAdminEmail = email.toLowerCase() === 'admin@gmail.com'
+      const isAdminEmail = normalizedEmail === 'admin@gmail.com'
       
       await setDoc(doc(db, 'userProfiles', userCredential.user.uid), {
-        email: email,
+        email: normalizedEmail,
         role: isAdminEmail ? 'Admin' : 'User',
         createdAt: new Date().toISOString()
       })
@@ -131,11 +140,11 @@ export default function UserSignupPage() {
               </div>
             </div>
 
-            {email.toLowerCase() === 'admin@gmail.com' && (
+            {(email.toLowerCase().includes('admin@gmail.com') || email.toLowerCase().includes('admin@gamil.com')) && (
               <Alert className="bg-amber-50 border-amber-200">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-xs text-amber-700 font-medium">
-                  Initializing System Administrator. If already registered, please navigate to the Login page.
+                  Initializing System Administrator. Ensure the email is spelled correctly (admin@gmail.com).
                 </AlertDescription>
               </Alert>
             )}
