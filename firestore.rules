@@ -3,58 +3,115 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * INTELLISYNCEX SECURITY POSTURE:
-     * 1. Path-based isolation for user document workspaces.
-     * 2. Identity-mapped global audit trails (activity_logs).
-     * 3. Role-based administrative override.
-     * 4. Support for public username lookups for registration/login mapping.
+     * IntelliSecureX Security Rules
+     *
+     * CORE PHILOSOPHY:
+     * This ruleset enforces a strict user-ownership model designed for a high-security document management platform. 
+     * Access is primarily governed by a user's identity (UID) and their role (Admin vs. User).
+     *
+     * DATA STRUCTURE:
+     * - User-specific metadata and configurations are stored in the top-level `/userProfiles/` collection.
+     * - Document metadata and analysis results are organized hierarchically under `/users/{userId}/documents/` 
+     *   to provide natural path-based isolation.
+     * - System-wide auditing is handled via the `/activityLogs/` root collection.
+     *
+     * KEY SECURITY DECISIONS:
+     * - AUTHORIZATION INDEPENDENCE: We use denormalized fields (like 'ownerId' or 'userId') and path-based 
+     *   variables to ensure rules can execute without costly 'get()' calls where possible.
+     * - ROLE-BASED ACCESS: Administrative access is determined by a 'role' field inside the user's profile.
+     * - IMMUTABILITY: Critical audit data (ActivityLogs) and relational ownership links are treated 
+     *   as immutable once created.
+     * - PROTOTYPING FLEXIBILITY: While access control is strict, data schemas (types and required fields) 
+     *   are not enforced here to allow for rapid iteration on the frontend.
      */
 
+    // --- Helper Functions ---
+
+    /** Checks if the request is from an authenticated user. */
     function isSignedIn() {
       return request.auth != null;
     }
 
+    /** Checks if the authenticated user's UID matches the provided userId. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
-      return isSignedIn() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    /** 
+     * Verifies if the user exists and is the owner before permitting changes. 
+     * Used for update/delete to prevent operations on non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
     }
 
-    match /users/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isAdmin() || (request.query.limit == 1);
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId) || isAdmin();
+    /** 
+     * Checks if the authenticated user has the 'Admin' role.
+     * Note: This involves a read to the userProfiles collection.
+     */
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for user profile data including roles and email.
+     * @path /userProfiles/{userId}
+     * @allow (create) if auth.uid matches path ID.
+     * @deny (list) if user is not an Admin.
+     * @principle Path-based ownership for users and role-based oversight for admins.
+     */
+    match /userProfiles/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
       allow delete: if isAdmin();
     }
 
+    /**
+     * @description System audit logs for tracking user and document activity.
+     * @path /activityLogs/{logId}
+     * @allow (create) if the user is authenticated.
+     * @deny (update/delete) always, as logs are immutable for auditing.
+     * @principle Field-based authorization and restricted admin-only listing.
+     */
+    match /activityLogs/{logId} {
+      allow get: if isAdmin() || (resource != null && resource.data.userId == request.auth.uid);
+      allow list: if isAdmin();
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Document metadata stored per user.
+     * @path /users/{userId}/documents/{documentId}
+     * @allow (create) if userId in path matches auth and data.ownerId.
+     * @deny (update) if the ownerId is being changed.
+     * @principle Relational integrity and path-based ownership.
+     */
     match /users/{userId}/documents/{documentId} {
       allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isExistingOwner(userId) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isExistingOwner(userId);
 
-      match /entity_detections/{detectionId} {
-        allow get, list, create, update, delete: if isOwner(userId) || isAdmin();
+      /**
+       * @description Results of sensitive entity analysis for a specific document.
+       * @path /users/{userId}/documents/{documentId}/analysisResults/{resultId}
+       * @allow (read/write) if the parent document's owner matches auth.
+       * @deny (any) if the path userId does not match the user's UID.
+       * @principle Inherited ownership through the document hierarchy.
+       */
+      match /analysisResults/{resultId} {
+        allow get, list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId);
+        allow update: if isExistingOwner(userId);
+        allow delete: if isExistingOwner(userId);
       }
     }
 
-    match /activity_logs/{activityLogId} {
-      // Admins see all logs. Users see their own identity-mapped logs.
-      allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if false; // Audit integrity
-      allow delete: if isAdmin();
-    }
-
-    match /sessions/{sessionId} {
-      allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create: if isSignedIn();
-      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow delete: if isAdmin();
-    }
   }
 }
