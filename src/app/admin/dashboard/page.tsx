@@ -21,10 +21,11 @@ import {
   Users as UsersIcon,
   PieChart as PieChartIcon,
   LayoutDashboard,
-  Database
+  Database,
+  Timer
 } from "lucide-react"
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
-import { collection, doc, updateDoc, query, limit, getDocs } from "firebase/firestore"
+import { collection, doc, updateDoc, query, limit, getDocs, serverTimestamp } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -109,6 +110,41 @@ export default function AdminDashboard() {
     return { statusData, timeData, agentData };
   }, [calls]);
 
+  const stats = useMemo(() => {
+    if (!calls) return { total: 0, pending: 0, active: 0, resolved: 0, avgResolutionTime: "0m" };
+
+    const total = calls.length;
+    const pending = calls.filter(c => c.status === 'Pending').length;
+    const active = calls.filter(c => c.status === 'In Progress').length;
+    const resolved = calls.filter(c => c.status === 'Completed');
+    
+    let totalResolutionMs = 0;
+    let resolvedCountWithTime = 0;
+
+    resolved.forEach(c => {
+      if (c.createdAt && c.resolvedAt) {
+        const start = c.createdAt.toDate?.() || new Date(c.createdAt);
+        const end = c.resolvedAt.toDate?.() || new Date(c.resolvedAt);
+        totalResolutionMs += end.getTime() - start.getTime();
+        resolvedCountWithTime++;
+      }
+    });
+
+    const avgMs = resolvedCountWithTime > 0 ? totalResolutionMs / resolvedCountWithTime : 0;
+    const avgMinutes = Math.round(avgMs / 60000);
+    const avgFormatted = avgMinutes > 60 
+      ? `${Math.floor(avgMinutes / 60)}h ${avgMinutes % 60}m`
+      : `${avgMinutes}m`;
+
+    return {
+      total,
+      pending,
+      active,
+      resolved: resolved.length,
+      avgResolutionTime: avgFormatted
+    };
+  }, [calls]);
+
   const handleExport = async () => {
     if (isExporting) return;
     setIsExporting(true);
@@ -160,7 +196,11 @@ export default function AdminDashboard() {
   const updateStatus = async (id: string, status: string) => {
     try {
       const docRef = doc(db, 'callRecords', id);
-      await updateDoc(docRef, { status });
+      const updates: any = { status };
+      if (status === 'Completed') {
+        updates.resolvedAt = serverTimestamp();
+      }
+      await updateDoc(docRef, updates);
       toast({ title: "Log Updated", description: `Record status set to ${status}.` });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Action Inhibited", description: "Failed to modify record status." });
@@ -181,13 +221,6 @@ export default function AdminDashboard() {
       return timeB - timeA;
     }) : [];
 
-  const stats = {
-    total: calls?.length || 0,
-    pending: calls?.filter(c => c.status === 'Pending').length || 0,
-    active: calls?.filter(c => c.status === 'In Progress').length || 0,
-    closed: calls?.filter(c => c.status === 'Completed').length || 0
-  }
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Pending': 
@@ -195,7 +228,7 @@ export default function AdminDashboard() {
       case 'In Progress': 
         return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 font-medium uppercase text-[10px] tracking-widest px-2">ACTIVE</Badge>
       case 'Completed': 
-        return <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 font-medium uppercase text-[10px] tracking-widest px-2">CLOSED</Badge>
+        return <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 font-medium uppercase text-[10px] tracking-widest px-2">RESOLVED</Badge>
       default: 
         return <Badge variant="outline" className="text-[10px]">{status}</Badge>
     }
@@ -239,12 +272,12 @@ export default function AdminDashboard() {
       </header>
 
       <div className="space-y-12">
-        {/* Top Summary Cards */}
+        {/* KPI Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="System Volume" value={stats.total} icon={<Database className="w-4 h-4" />} color="primary" />
-          <StatCard title="Pending Queue" value={stats.pending} icon={<Clock className="h-4 w-4" />} color="slate" />
-          <StatCard title="Operational" value={stats.active} icon={<Activity className="h-4 w-4" />} color="amber" />
-          <StatCard title="Total Archived" value={stats.closed} icon={<CheckCircle2 className="h-4 w-4" />} color="emerald" />
+          <StatCard title="Total Calls" value={stats.total} icon={<Database className="w-4 h-4" />} color="primary" />
+          <StatCard title="Pending Calls" value={stats.pending} icon={<Clock className="h-4 w-4" />} color="slate" />
+          <StatCard title="Resolved Calls" value={stats.resolved} icon={<CheckCircle2 className="h-4 w-4" />} color="emerald" />
+          <StatCard title="Avg Resolution Time" value={stats.avgResolutionTime} icon={<Timer className="h-4 w-4" />} color="amber" />
         </div>
 
         {/* Analytics Section */}
@@ -448,7 +481,7 @@ export default function AdminDashboard() {
   )
 }
 
-function StatCard({ title, value, icon, color }: { title: string, value: number, icon: React.ReactNode, color: string }) {
+function StatCard({ title, value, icon, color }: { title: string, value: string | number, icon: React.ReactNode, color: string }) {
   const colorMap: Record<string, string> = {
     primary: 'text-primary bg-primary/10 border-primary/20',
     slate: 'text-slate-500 bg-slate-500/10 border-slate-500/20',
