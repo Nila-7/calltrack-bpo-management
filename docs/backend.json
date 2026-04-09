@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "CallRecord": {
@@ -8,7 +9,7 @@
         "customerName": { "type": "string" },
         "issue": { "type": "string" },
         "assignedAgent": { "type": "string" },
-        "status": { "type": "string", "enum": ["Waiting", "In Progress", "Completed"] },
+        "status": { "type": "string", "enum": ["Pending", "In Progress", "Completed"] },
         "userId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
@@ -30,29 +31,13 @@
     "providers": ["password"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/calls/{callId}",
-        "definition": {
-          "entityName": "CallRecord",
-          "schema": { "$ref": "#/backend/entities/CallRecord" },
-          "description": "Stores all call center records.",
-          "params": [
-            { "name": "callId", "description": "Unique call record ID" }
-          ]
-        }
-      },
-      {
-        "path": "/userProfiles/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": { "$ref": "#/backend/entities/UserProfile" },
-          "description": "Stores user roles and profiles.",
-          "params": [
-            { "name": "userId", "description": "Firebase Auth UID" }
-          ]
-        }
-      }
-    ]
+    "/callRecords/{recordId}": {
+      "schema": "CallRecord",
+      "description": "Stores all call center records."
+    },
+    "/userProfiles/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user roles and profiles."
+    }
   }
 }
