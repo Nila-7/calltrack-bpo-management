@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -16,7 +15,9 @@ import {
   PlayCircle,
   Loader2,
   AlertCircle,
-  History
+  History,
+  PhoneForwarded,
+  Layout
 } from "lucide-react"
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
 import { collection, addDoc, serverTimestamp, query, where } from "firebase/firestore"
@@ -40,18 +41,18 @@ export default function UserDashboard() {
       if (!user) {
         router.push("/user/login")
       } else if (isAdmin) {
-        router.push("/admin/dashboard")
+        // router.push("/admin/dashboard") // Allow admins to use user dashboard if they want
       }
     }
   }, [user, isUserLoading, isAdmin, router])
 
   const callsQuery = useMemoFirebase(() => {
-    if (!user || isUserLoading || isAdmin) return null
+    if (!user || isUserLoading) return null
     return query(
       collection(db, 'callRecords'),
       where('userId', '==', user.uid)
     )
-  }, [db, user, isUserLoading, isAdmin])
+  }, [db, user, isUserLoading])
 
   const { data: calls, isLoading: callsLoading } = useCollection(callsQuery)
 
@@ -78,11 +79,11 @@ export default function UserDashboard() {
       setIssue("")
       setAgentName("")
       toast({ 
-        title: "Record Logged", 
-        description: "Call has been added to the queue successfully." 
+        title: "Log Entry Successful", 
+        description: "Your call record has been synchronized with the master database." 
       })
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Logging Failed", description: "Internal system error. Try again." })
+      toast({ variant: "destructive", title: "Logging Failed", description: "Internal system error. Please retry." })
     } finally {
       setSubmitting(false)
     }
@@ -90,18 +91,18 @@ export default function UserDashboard() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Pending': return <Badge variant="outline" className="text-slate-500 bg-slate-50 border-slate-200 font-bold uppercase text-[10px] tracking-wider"><Clock className="w-3 h-3 mr-1" /> PENDING</Badge>
-      case 'In Progress': return <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 font-bold uppercase text-[10px] tracking-wider"><PlayCircle className="w-3 h-3 mr-1" /> IN PROGRESS</Badge>
-      case 'Completed': return <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 font-bold uppercase text-[10px] tracking-wider"><CheckCircle2 className="w-3 h-3 mr-1" /> COMPLETED</Badge>
+      case 'Pending': return <Badge variant="outline" className="text-slate-500 bg-slate-50 border-slate-200 dark:bg-slate-900/50 dark:border-slate-800 font-bold uppercase text-[10px] tracking-wider"><Clock className="w-3 h-3 mr-1" /> PENDING</Badge>
+      case 'In Progress': return <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 font-bold uppercase text-[10px] tracking-wider"><PlayCircle className="w-3 h-3 mr-1" /> ACTIVE</Badge>
+      case 'Completed': return <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 font-bold uppercase text-[10px] tracking-wider"><CheckCircle2 className="w-3 h-3 mr-1" /> CLOSED</Badge>
       default: return <Badge variant="outline">{status}</Badge>
     }
   }
 
-  if (isUserLoading || isAdmin) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+  if (isUserLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center space-y-3">
         <Loader2 className="animate-spin text-primary w-10 h-10 mx-auto" />
-        <p className="text-slate-500 font-medium">Syncing Agent Terminal...</p>
+        <p className="text-muted-foreground font-medium">Synchronizing Workspace...</p>
       </div>
     </div>
   )
@@ -109,50 +110,71 @@ export default function UserDashboard() {
   if (!user) return null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-4">
-          <Card className="border-none shadow-xl shadow-slate-200/50 sticky top-24 ring-1 ring-slate-100">
-            <CardHeader className="bg-slate-50/50 border-b rounded-t-lg">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Plus className="w-5 h-5 text-primary" />
-                Log Call Record
-              </CardTitle>
-              <CardDescription>Enter customer interaction details</CardDescription>
+    <div className="w-full max-w-[1600px] mx-auto px-6 py-8 transition-all duration-300">
+      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b pb-8">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3 text-primary">
+            <Layout className="w-6 h-6" />
+            <span className="text-xs font-black uppercase tracking-[0.3em]">Agent Dashboard</span>
+          </div>
+          <h1 className="text-4xl font-black tracking-tight text-foreground uppercase">Agent Workspace</h1>
+          <p className="text-muted-foreground font-medium">Central command for BPO call tracking and record management</p>
+        </div>
+        <div className="flex items-center gap-3 bg-card border rounded-xl px-4 py-2 shadow-sm">
+          <div className="text-right">
+            <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Active Session</div>
+            <div className="text-sm font-bold text-foreground">{user.email}</div>
+          </div>
+          <PhoneForwarded className="w-5 h-5 text-primary ml-2" />
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Module: Log Call Record */}
+        <div className="lg:col-span-5 xl:col-span-4">
+          <Card className="border shadow-xl shadow-black/5 bg-card overflow-hidden">
+            <CardHeader className="bg-muted/30 border-b">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <CardTitle className="text-xl font-bold uppercase tracking-tight">Log Call Entry</CardTitle>
+              </div>
+              <CardDescription>Input customer interaction details for processing</CardDescription>
             </CardHeader>
-            <CardContent className="pt-6">
-              <form onSubmit={handleAddCall} className="space-y-4">
+            <CardContent className="pt-8">
+              <form onSubmit={handleAddCall} className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Customer Name</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Customer Identity</Label>
                   <Input 
                     placeholder="e.g. Acme Corp / Jane Doe" 
-                    className="h-11 bg-slate-50/30"
+                    className="h-12 bg-muted/20 border-border focus-visible:ring-primary"
                     required 
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Agent Identifier</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Assigned Agent</Label>
                   <Input 
-                    placeholder={user.email || "Agent ID"} 
-                    className="h-11 bg-slate-50/30"
+                    placeholder={user.email || "Agent Identifier"} 
+                    className="h-12 bg-muted/20 border-border"
                     value={agentName}
                     onChange={(e) => setAgentName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Issue Description</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Inquiry Details</Label>
                   <Textarea 
-                    placeholder="Briefly describe the customer's request..." 
+                    placeholder="Describe the nature of the customer interaction..." 
                     required 
-                    className="min-h-[120px] bg-slate-50/30 resize-none"
+                    className="min-h-[150px] bg-muted/20 border-border resize-none"
                     value={issue}
                     onChange={(e) => setIssue(e.target.value)}
                   />
                 </div>
-                <Button className="w-full h-12 bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/20" disabled={submitting}>
-                  {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                <Button className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all" disabled={submitting}>
+                  {submitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Plus className="w-5 h-5 mr-2" />}
                   Finalize Record
                 </Button>
               </form>
@@ -160,41 +182,44 @@ export default function UserDashboard() {
           </Card>
         </div>
 
-        <div className="lg:col-span-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <History className="w-6 h-6 text-slate-400" />
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Personal Records</h2>
+        {/* Module: Recent Activity */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+          <div className="flex items-center justify-between bg-card p-4 rounded-xl border border-border/50 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-muted rounded-lg">
+                <History className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <h2 className="text-xl font-black text-foreground uppercase tracking-tight">Recent Synchronization</h2>
             </div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full">
-              {sortedCalls.length} Total
+            <div className="text-xs font-black text-primary bg-primary/10 px-4 py-1.5 rounded-full border border-primary/20">
+              {sortedCalls.length} TOTAL RECORDS
             </div>
           </div>
           
           <div className="space-y-4">
             {callsLoading ? (
-              <div className="flex flex-col items-center justify-center py-24 space-y-4">
-                <Loader2 className="animate-spin text-primary w-10 h-10" />
-                <p className="text-sm text-slate-400 font-medium">Fetching History...</p>
+              <div className="flex flex-col items-center justify-center py-32 space-y-4 bg-card rounded-2xl border border-dashed border-border">
+                <Loader2 className="animate-spin text-primary w-12 h-12" />
+                <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">Accessing Logs...</p>
               </div>
             ) : sortedCalls.map((call) => (
-              <Card key={call.id} className="border-none shadow-md hover:shadow-xl transition-all duration-300 group ring-1 ring-slate-100 overflow-hidden">
+              <Card key={call.id} className="border shadow-md hover:shadow-xl transition-all duration-300 group overflow-hidden bg-card">
                 <CardContent className="p-0">
                   <div className="flex items-stretch">
-                    <div className={`w-1.5 ${call.status === 'Completed' ? 'bg-emerald-500' : call.status === 'In Progress' ? 'bg-amber-500' : 'bg-slate-300'}`} />
-                    <div className="flex-1 p-6 flex flex-col sm:flex-row justify-between items-start gap-4">
-                      <div className="space-y-1.5 flex-1">
-                        <div className="flex items-center flex-wrap gap-2">
-                          <span className="font-bold text-lg text-slate-900">{call.customerName}</span>
+                    <div className={`w-2 transition-colors duration-300 ${call.status === 'Completed' ? 'bg-emerald-500' : call.status === 'In Progress' ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                    <div className="flex-1 p-6 flex flex-col sm:flex-row justify-between items-start gap-6">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center flex-wrap gap-3">
+                          <span className="font-black text-xl text-foreground tracking-tight">{call.customerName}</span>
                           {getStatusBadge(call.status)}
                         </div>
-                        <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-2xl">{call.issue}</p>
-                        <div className="flex items-center gap-4 pt-3">
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-widest border-r pr-4">
+                        <p className="text-sm text-muted-foreground font-medium leading-relaxed max-w-3xl">{call.issue}</p>
+                        <div className="flex items-center gap-6 pt-4">
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] bg-muted/50 px-3 py-1 rounded-md">
                             Agent: {call.assignedAgent}
                           </div>
-                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                            {call.createdAt?.toDate?.().toLocaleString() || 'Syncing...'}
+                          <div className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">
+                            {call.createdAt?.toDate?.().toLocaleString() || 'SYNCING...'}
                           </div>
                         </div>
                       </div>
@@ -204,13 +229,16 @@ export default function UserDashboard() {
               </Card>
             ))}
             {!callsLoading && sortedCalls.length === 0 && (
-              <div className="text-center py-32 bg-white rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center space-y-3">
-                <div className="p-4 bg-slate-50 rounded-full">
-                  <AlertCircle className="w-8 h-8 text-slate-300" />
+              <div className="text-center py-40 bg-card rounded-2xl border-2 border-dashed border-border flex flex-col items-center space-y-4">
+                <div className="p-6 bg-muted rounded-full">
+                  <AlertCircle className="w-10 h-10 text-muted-foreground/30" />
                 </div>
-                <p className="text-slate-400 font-medium italic">Your record queue is currently empty.</p>
-                <Button variant="ghost" className="text-primary font-bold text-xs" onClick={() => (document.querySelector('input') as HTMLElement)?.focus()}>
-                  Log your first call now
+                <div className="space-y-1">
+                  <p className="text-foreground font-black uppercase tracking-widest">No Log Data Detected</p>
+                  <p className="text-sm text-muted-foreground font-medium">Your personal synchronization queue is currently empty.</p>
+                </div>
+                <Button variant="outline" className="mt-4 font-bold text-xs uppercase tracking-widest" onClick={() => (document.querySelector('input') as HTMLElement)?.focus()}>
+                  Initiate First Entry
                 </Button>
               </div>
             )}

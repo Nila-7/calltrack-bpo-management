@@ -3,9 +3,11 @@
 import { useAuth, useUser } from "@/firebase"
 import { signOut } from "firebase/auth"
 import { Button } from "@/components/ui/button"
-import { ShieldCheck, LogOut, User, LayoutDashboard } from "lucide-react"
+import { ShieldCheck, LogOut, User, LayoutDashboard, UserCircle } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "./ThemeToggle"
+import { cn } from "@/lib/utils"
 
 export function Navbar() {
   const { user } = useUser()
@@ -20,42 +22,74 @@ export function Navbar() {
 
   const isAdmin = user?.email === 'admin@gmail.com'
 
-  // Hide navbar on login/signup pages to match the redesign requirements
-  if (!user || pathname.includes('/login') || pathname.includes('/signup')) return null
+  // Only hide navbar on specific scenarios if needed, but the prompt says fixed top navbar
+  if (!user && (pathname === '/user/login' || pathname === '/admin/login' || pathname === '/user/signup')) {
+    return null
+  }
 
   return (
-    <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-50 w-full transition-colors duration-300 shadow-sm">
+      <div className="max-w-[1600px] mx-auto px-6">
         <div className="flex justify-between h-16 items-center">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
-            <div className="p-2 bg-blue-500 rounded-lg">
+          {/* Left: Branding */}
+          <div className="flex items-center gap-2 cursor-pointer group" onClick={() => router.push('/')}>
+            <div className="p-2 bg-blue-600 rounded-lg group-hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
-            <span className="font-black text-xl tracking-tighter text-[#111827]">IntelliSecureX</span>
+            <span className="font-black text-xl tracking-tighter text-foreground">CallTrack BPO Management</span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              {isAdmin ? (
-                <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-600 flex gap-1 items-center px-3 py-1 font-bold">
-                  <ShieldCheck className="w-3 h-3" />
-                  Admin Console
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="bg-slate-50 text-slate-500 flex gap-1 items-center px-3 py-1 font-bold">
-                  <User className="w-3 h-3" />
-                  User Portal
-                </Badge>
+          {/* Center: Segmented Navigation (Roles) */}
+          <div className="hidden lg:flex p-1 bg-muted rounded-xl border border-border/50">
+            <button 
+              onClick={() => router.push('/user/dashboard')}
+              className={cn(
+                "flex items-center gap-2 py-2 px-5 rounded-lg font-bold text-xs transition-all",
+                pathname.includes('/user/') && !pathname.includes('/login') && !pathname.includes('/signup')
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "text-muted-foreground hover:text-foreground"
               )}
-              <span className="text-sm text-slate-500 font-bold hidden md:block">
-                {user.email}
-              </span>
-            </div>
+            >
+              <User className="w-3.5 h-3.5" />
+              User Portal
+            </button>
+            <button 
+              onClick={() => router.push('/admin/dashboard')}
+              className={cn(
+                "flex items-center gap-2 py-2 px-5 rounded-lg font-bold text-xs transition-all",
+                pathname.includes('/admin/') && !pathname.includes('/login')
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Admin Console
+            </button>
+          </div>
 
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-500 hover:text-red-500 font-bold">
-              <LogOut className="w-4 h-4 md:mr-2" />
-              <span className="hidden md:inline">Logout</span>
-            </Button>
+          {/* Right: Actions & User Info */}
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            
+            {user && (
+              <div className="flex items-center gap-4 border-l pl-4 ml-2">
+                <div className="hidden md:flex flex-col items-end">
+                  <span className="text-[10px] font-black text-primary uppercase tracking-widest leading-none mb-1">
+                    {isAdmin ? 'System Administrator' : 'Support Agent'}
+                  </span>
+                  <span className="text-xs font-bold text-muted-foreground">
+                    {user.email}
+                  </span>
+                </div>
+                
+                <UserCircle className="w-8 h-8 text-muted-foreground" />
+
+                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all rounded-full">
+                  <LogOut className="w-5 h-5" />
+                  <span className="sr-only">Logout</span>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

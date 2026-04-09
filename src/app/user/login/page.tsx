@@ -10,7 +10,6 @@ import { ShieldCheck, Lock, Loader2, KeyRound, User as UserIcon, MessageSquare }
 import { useAuth, useUser } from "@/firebase"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
-import { cn } from "@/lib/utils"
 
 export default function UserLoginPage() {
   const router = useRouter()
@@ -59,58 +58,35 @@ export default function UserLoginPage() {
 
   if (isUserLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#111827]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute inset-0 bg-[#111827] pointer-events-none" />
-      
-      <Card className="w-full max-w-[450px] shadow-2xl border-none rounded-3xl z-10 bg-white p-8 space-y-8">
-        <div className="text-center space-y-2">
+    <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden bg-background">
+      <Card className="w-full max-w-[500px] shadow-2xl border bg-card p-10 space-y-8 transition-all">
+        <div className="text-center space-y-3">
           <div className="flex justify-center">
-            <div className="relative p-4 border-2 border-blue-500/20 rounded-2xl">
-              <ShieldCheck className="w-12 h-12 text-blue-500" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                 <div className="w-6 h-6 bg-blue-500 rounded-sm opacity-10" />
-              </div>
+            <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20">
+              <ShieldCheck className="w-14 h-14 text-primary" />
             </div>
           </div>
-          <h1 className="text-4xl font-black tracking-tight text-[#111827]">IntelliSecureX</h1>
-          <p className="text-slate-400 text-sm font-medium">Identity-Aware Document Deception Engine</p>
-        </div>
-
-        {/* Tab Selection */}
-        <div className="flex p-1 bg-slate-50 rounded-2xl border border-slate-100">
-          <button 
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-500/20 transition-all"
-          >
-            <UserIcon className="w-4 h-4" />
-            User Portal
-          </button>
-          <button 
-            onClick={() => router.push('/admin/login')}
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-blue-500 font-bold text-sm hover:bg-white transition-all"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            Admin Console
-          </button>
+          <h1 className="text-4xl font-black tracking-tight text-foreground uppercase">CallTrack BPO</h1>
+          <p className="text-muted-foreground text-sm font-medium tracking-wide uppercase">Enterprise Management System</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-5">
             <div className="space-y-2">
-              <Label className="text-sm font-bold text-[#111827] ml-1">Username</Label>
+              <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Agent Username</Label>
               <div className="relative">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input 
                   type="email" 
                   placeholder="Enter username" 
-                  className="pl-12 h-14 bg-slate-50 border-none rounded-2xl focus-visible:ring-blue-500 font-medium"
+                  className="pl-12 h-14 bg-muted/20 border-border rounded-xl focus-visible:ring-primary font-medium"
                   required 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -118,13 +94,13 @@ export default function UserLoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-bold text-[#111827] ml-1">Password</Label>
+              <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Security Access Code</Label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input 
                   type="password" 
                   placeholder="••••••••"
-                  className="pl-12 h-14 bg-slate-50 border-none rounded-2xl focus-visible:ring-blue-500 font-medium"
+                  className="pl-12 h-14 bg-muted/20 border-border rounded-xl focus-visible:ring-primary font-medium"
                   required 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -133,33 +109,24 @@ export default function UserLoginPage() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full h-14 bg-blue-500 hover:bg-blue-600 rounded-2xl text-lg font-bold shadow-xl shadow-blue-500/25 transition-all" disabled={loading}>
+          <Button type="submit" className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-lg font-black uppercase tracking-widest shadow-xl shadow-blue-500/25 transition-all" disabled={loading}>
             {loading ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : <KeyRound className="w-6 h-6 mr-2" />}
-            Sign In
+            Sign In to Terminal
           </Button>
         </form>
 
-        <div className="pt-4 text-center border-t border-slate-50 space-y-6">
+        <div className="pt-6 text-center border-t space-y-6">
           <button 
             onClick={() => router.push('/user/signup')}
-            className="text-sm font-bold text-slate-500 hover:text-blue-500 transition-colors"
+            className="text-sm font-black text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
           >
-            Need an account? <span className="text-blue-500">Sign Up Now</span>
+            Need an account? <span className="text-primary underline underline-offset-4 ml-1">Create Agent ID</span>
           </button>
-          
-          <div className="text-[10px] font-black text-slate-300 tracking-[0.4em] uppercase">
-            SECURE SESSION GATEWAY
-          </div>
         </div>
       </Card>
 
-      {/* Floating Elements */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-2 bg-[#1f2937] text-slate-400 text-[10px] font-black tracking-[0.2em] rounded-full border border-white/5 z-50">
-        SECURE SESSION GATEWAY
-      </div>
-
       <div className="fixed bottom-8 right-8 z-50">
-        <button className="p-4 bg-blue-500 text-white rounded-full shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform">
+        <button className="p-4 bg-primary text-primary-foreground rounded-full shadow-2xl shadow-primary/40 hover:scale-110 transition-transform">
           <MessageSquare className="w-6 h-6" />
         </button>
       </div>
