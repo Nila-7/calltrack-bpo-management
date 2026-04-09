@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -35,12 +36,13 @@ export default function AdminDashboard() {
   const isAdmin = user?.email === 'admin@gmail.com'
 
   useEffect(() => {
-    if (!isUserLoading && (!user || !isAdmin)) {
-      router.push("/admin/login")
+    if (!isUserLoading) {
+      if (!user || !isAdmin) {
+        router.push("/admin/login")
+      }
     }
   }, [user, isUserLoading, isAdmin, router])
 
-  // Removed where/orderBy from query to prevent missing index errors
   const allCallsQuery = useMemoFirebase(() => {
     if (!user || !isAdmin) return null;
     return query(collection(db, 'callRecords'), limit(200));
@@ -58,7 +60,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Filter and sort in memory
   const processedCalls = calls ? calls
     .filter(call => {
       const matchesSearch = call.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,7 +90,7 @@ export default function AdminDashboard() {
     }
   }
 
-  if (isUserLoading) {
+  if (isUserLoading || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center space-y-4">
@@ -99,8 +100,6 @@ export default function AdminDashboard() {
       </div>
     )
   }
-
-  if (!isAdmin) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-1000">

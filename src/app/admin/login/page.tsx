@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -22,19 +23,20 @@ export default function AdminLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (email.toLowerCase() !== 'admin@gmail.com') {
+      toast({
+        variant: "destructive",
+        title: "Access Denied",
+        description: "This portal is reserved for System Administrators.",
+      })
+      return
+    }
+
     setLoading(true)
     try {
       await signInWithEmailAndPassword(auth, email, password)
       
-      if (email.toLowerCase() !== 'admin@gmail.com') {
-        toast({
-          variant: "destructive",
-          title: "Access Denied",
-          description: "This portal is reserved for System Administrators.",
-        })
-        return
-      }
-
       toast({
         title: "Admin Authenticated",
         description: "Welcome to the Command Center.",

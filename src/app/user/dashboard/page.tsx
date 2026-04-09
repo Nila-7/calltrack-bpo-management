@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -32,24 +33,28 @@ export default function UserDashboard() {
   const [agentName, setAgentName] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push("/user/login")
-    }
-  }, [user, isUserLoading, router])
+  const isAdmin = user?.email === 'admin@gmail.com'
 
-  // Removed orderBy from the query to prevent missing index errors (Permission Denied)
+  useEffect(() => {
+    if (!isUserLoading) {
+      if (!user) {
+        router.push("/user/login")
+      } else if (isAdmin) {
+        router.push("/admin/dashboard")
+      }
+    }
+  }, [user, isUserLoading, isAdmin, router])
+
   const callsQuery = useMemoFirebase(() => {
-    if (!user || isUserLoading) return null
+    if (!user || isUserLoading || isAdmin) return null
     return query(
       collection(db, 'callRecords'),
       where('userId', '==', user.uid)
     )
-  }, [db, user, isUserLoading])
+  }, [db, user, isUserLoading, isAdmin])
 
   const { data: calls, isLoading: callsLoading } = useCollection(callsQuery)
 
-  // Sort calls in memory to ensure recent records appear first without requiring a composite index
   const sortedCalls = calls ? [...calls].sort((a, b) => {
     const timeA = a.createdAt?.seconds || 0;
     const timeB = b.createdAt?.seconds || 0;
@@ -92,7 +97,7 @@ export default function UserDashboard() {
     }
   }
 
-  if (isUserLoading) return (
+  if (isUserLoading || isAdmin) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="text-center space-y-3">
         <Loader2 className="animate-spin text-primary w-10 h-10 mx-auto" />

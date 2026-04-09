@@ -25,13 +25,23 @@ export default function UserSignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (email.toLowerCase() === 'admin@gmail.com') {
+      toast({
+        variant: "destructive",
+        title: "Registration Denied",
+        description: "Admin accounts cannot be created here.",
+      })
+      return
+    }
+
     setLoading(true)
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       
       await setDoc(doc(db, 'userProfiles', userCredential.user.uid), {
         email: email,
-        role: email.toLowerCase() === 'admin@gmail.com' ? 'Admin' : 'User',
+        role: 'User',
         createdAt: new Date().toISOString()
       })
 
@@ -40,7 +50,7 @@ export default function UserSignupPage() {
         description: "Your agent account has been provisioned.",
       })
       
-      router.push('/')
+      router.push('/user/dashboard')
     } catch (error: any) {
       toast({
         variant: "destructive",
