@@ -1,13 +1,11 @@
-
 "use client"
 
 import { useAuth, useUser } from "@/firebase"
 import { signOut } from "firebase/auth"
 import { Button } from "@/components/ui/button"
-import { ShieldCheck, LogOut, User, UserCircle } from "lucide-react"
+import { ShieldCheck, LogOut, UserCircle } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 import { ThemeToggle } from "./ThemeToggle"
-import { cn } from "@/lib/utils"
 
 export function Navbar() {
   const { user } = useUser()
@@ -37,34 +35,6 @@ export function Navbar() {
             <span className="font-semibold text-xl tracking-tighter text-foreground">CallTrack BPO Management</span>
           </div>
 
-          {/* Center: Segmented Navigation (Access is now open to all authenticated users) */}
-          <div className="hidden lg:flex p-1 bg-muted rounded-xl border border-border/50">
-            <button 
-              onClick={() => router.push('/user/dashboard')}
-              className={cn(
-                "flex items-center gap-2 py-2 px-5 rounded-lg font-semibold text-xs transition-all",
-                pathname.includes('/user/') && !pathname.includes('/login') && !pathname.includes('/signup')
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <User className="w-3.5 h-3.5" />
-              User Portal
-            </button>
-            <button 
-              onClick={() => router.push('/admin/dashboard')}
-              className={cn(
-                "flex items-center gap-2 py-2 px-5 rounded-lg font-semibold text-xs transition-all",
-                pathname.includes('/admin/') && !pathname.includes('/login')
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Admin Console
-            </button>
-          </div>
-
           {/* Right: Actions & User Info */}
           <div className="flex items-center gap-4">
             <ThemeToggle />
@@ -73,7 +43,10 @@ export function Navbar() {
               <div className="flex items-center gap-4 border-l pl-4 ml-2">
                 <div className="hidden md:flex flex-col items-end">
                   <span className="text-[10px] font-semibold text-primary uppercase tracking-widest leading-none mb-1">
-                    Demo Access
+                    System Access
+                  </span>
+                  <span className="text-[11px] text-muted-foreground font-medium truncate max-w-[150px]">
+                    {user.email}
                   </span>
                 </div>
                 

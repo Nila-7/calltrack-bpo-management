@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PhoneCall, Lock, Loader2, KeyRound, User as UserIcon, ShieldCheck, AlertCircle } from "lucide-react"
+import { PhoneCall, Lock, Loader2, KeyRound, User as UserIcon, AlertCircle } from "lucide-react"
 import { useAuth, useUser } from "@/firebase"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -27,11 +26,7 @@ export default function UserLoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      if (user.email === 'admin@gmail.com') {
-        router.push("/admin/dashboard")
-      } else {
-        router.push("/user/dashboard")
-      }
+      router.push("/user/dashboard")
     }
   }, [user, isUserLoading, router])
 
@@ -40,35 +35,19 @@ export default function UserLoginPage() {
     setError(null)
     setLoading(true)
     
-    // 1. Clean and normalize inputs
     const normalizedEmail = email.trim().toLowerCase()
     const cleanPassword = password
-    
-    // Auto-correct common typo for the primary admin email
-    let finalEmail = normalizedEmail
-    if (normalizedEmail.includes('admin@gamil.com')) {
-      finalEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
-    }
-
-    console.log("Attempting user login for:", finalEmail)
 
     try {
-      await signInWithEmailAndPassword(auth, finalEmail, cleanPassword)
-      
+      await signInWithEmailAndPassword(auth, normalizedEmail, cleanPassword)
       toast({
         title: "Access Authorized",
         description: `Welcome back. Redirecting to workspace...`,
       })
     } catch (err: any) {
-      // Log full error for debugging
       console.error("USER_AUTH_FAILURE:", err)
-      
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         setError("Invalid Email or Password. Please check your credentials.")
-      } else if (err.code === 'auth/invalid-email') {
-        setError("The email address provided is not valid.")
-      } else if (err.code === 'auth/too-many-requests') {
-        setError("Too many failed attempts. Please try again later or reset your password.")
       } else {
         setError("Authentication failed. Please check your network or try again later.")
       }
@@ -92,7 +71,7 @@ export default function UserLoginPage() {
       </div>
 
       <Card className="w-full max-w-[500px] shadow-2xl border-none bg-card p-0 overflow-hidden rounded-[2rem]">
-        <div className="p-10 pb-0 text-center space-y-4">
+        <div className="p-10 pb-4 text-center space-y-4">
           <div className="flex justify-center">
             <div className="p-4 bg-primary/10 rounded-2xl">
               <PhoneCall className="w-10 h-10 text-primary" />
@@ -100,34 +79,15 @@ export default function UserLoginPage() {
           </div>
           <div className="space-y-1">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground uppercase">CallTrack</h1>
-            <p className="text-muted-foreground text-xs font-normal uppercase tracking-widest leading-relaxed">Smart BPO Call Management System</p>
+            <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-[0.2em]">User Portal Access</p>
           </div>
         </div>
 
-        <CardContent className="p-10 pt-8 space-y-8">
-          <div className="grid grid-cols-2 p-1.5 bg-muted rounded-2xl gap-2">
-            <Button 
-              variant="default" 
-              className="rounded-xl font-semibold text-xs shadow-md h-11 bg-primary text-primary-foreground"
-              onClick={() => router.push('/user/login')}
-            >
-              <UserIcon className="w-4 h-4 mr-2" />
-              User Portal
-            </Button>
-            <Button 
-              variant="ghost" 
-              className="rounded-xl font-semibold text-xs text-muted-foreground hover:text-foreground h-11"
-              onClick={() => router.push('/admin/login')}
-            >
-              <ShieldCheck className="w-4 h-4 mr-2" />
-              Admin Console
-            </Button>
-          </div>
-
+        <CardContent className="p-10 pt-4 space-y-8">
           {error && (
             <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20 border">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs font-medium leading-relaxed">
+              <AlertDescription className="text-xs font-medium">
                 {error}
               </AlertDescription>
             </Alert>
@@ -136,13 +96,13 @@ export default function UserLoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-5">
               <div className="space-y-2">
-                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] ml-1">Username / Email</Label>
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] ml-1">Agent Email</Label>
                 <div className="relative">
                   <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
+                  <input 
                     type="email" 
                     placeholder="agent@calltrack.com" 
-                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-normal"
+                    className="flex h-12 w-full rounded-xl border-none bg-muted/30 px-12 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-normal"
                     required 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -153,10 +113,10 @@ export default function UserLoginPage() {
                 <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] ml-1">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
+                  <input 
                     type="password" 
                     placeholder="••••••••"
-                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-normal"
+                    className="flex h-12 w-full rounded-xl border-none bg-muted/30 px-12 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-normal"
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -172,13 +132,21 @@ export default function UserLoginPage() {
           </form>
 
           <div className="pt-6 text-center border-t space-y-4">
-            <button 
-              onClick={() => router.push('/user/signup')}
-              className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors uppercase tracking-wider"
-            >
-              Need an account? <span className="text-primary font-semibold">Sign Up Now</span>
-            </button>
-            <p className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-[0.4em]">SECURE SESSION GATEWAY</p>
+            <div className="flex flex-col gap-2">
+              <button 
+                onClick={() => router.push('/user/signup')}
+                className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors uppercase tracking-wider"
+              >
+                Need an account? <span className="text-primary font-semibold">Sign Up Now</span>
+              </button>
+              <button 
+                onClick={() => router.push('/admin/login')}
+                className="text-[10px] font-semibold text-muted-foreground/60 hover:text-primary transition-colors uppercase tracking-widest"
+              >
+                Switch to Admin Console
+              </button>
+            </div>
+            <p className="text-[9px] font-semibold text-muted-foreground/40 uppercase tracking-[0.4em]">SECURE SESSION GATEWAY</p>
           </div>
         </CardContent>
       </Card>
