@@ -24,7 +24,10 @@ import {
   LayoutDashboard,
   Database,
   Timer,
-  UserPlus
+  UserPlus,
+  Trophy,
+  Medal,
+  Star
 } from "lucide-react"
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
 import { collection, doc, updateDoc, query, limit, getDocs, serverTimestamp } from "firebase/firestore"
@@ -59,6 +62,26 @@ export default function AdminDashboard() {
   }, [db, user])
 
   const { data: calls, isLoading: callsLoading } = useCollection(allCallsQuery)
+
+  const agentRanking = useMemo(() => {
+    if (!calls) return [];
+    const agentMap = new Map();
+    calls.forEach(c => {
+      const agent = c.assignedAgent || 'Unassigned';
+      if (!agentMap.has(agent)) {
+        agentMap.set(agent, { name: agent, total: 0, resolved: 0 });
+      }
+      const stats = agentMap.get(agent);
+      stats.total++;
+      if (c.status === 'Completed') {
+        stats.resolved++;
+      }
+    });
+
+    return Array.from(agentMap.values())
+      .sort((a, b) => b.resolved - a.resolved || b.total - a.total)
+      .slice(0, 5);
+  }, [calls]);
 
   const analyticsData = useMemo(() => {
     if (!calls) return { statusData: [], timeData: [], agentData: [] };
@@ -379,6 +402,61 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Top Performing Agents Section */}
+        <Card className="border-none shadow-2xl shadow-black/5 bg-card rounded-3xl overflow-hidden">
+          <CardHeader className="px-10 py-8 border-b border-border/50 bg-muted/5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-amber-500/10 rounded-2xl">
+                <Trophy className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="space-y-1">
+                <CardTitle className="text-xl font-semibold uppercase tracking-tight">Top Performing Agents</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground font-normal tracking-wide">Workforce leaderboard ranked by total resolved tickets.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-border/50">
+              {agentRanking.length > 0 ? agentRanking.map((agent, index) => (
+                <div key={agent.name} className="p-8 flex flex-col items-center text-center space-y-4 hover:bg-muted/10 transition-colors">
+                  <div className="relative">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold border-2 ${
+                      index === 0 ? 'bg-amber-100 text-amber-600 border-amber-300 shadow-lg shadow-amber-200/50' : 
+                      index === 1 ? 'bg-slate-100 text-slate-600 border-slate-300' : 
+                      index === 2 ? 'bg-orange-100 text-orange-600 border-orange-300' : 
+                      'bg-muted text-muted-foreground border-border'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    {index === 0 && <Star className="absolute -top-1 -right-1 w-5 h-5 text-amber-500 fill-amber-500 animate-pulse" />}
+                    {index === 1 && <Medal className="absolute -top-1 -right-1 w-5 h-5 text-slate-400" />}
+                    {index === 2 && <Medal className="absolute -top-1 -right-1 w-5 h-5 text-orange-400" />}
+                  </div>
+                  <div className="space-y-1 w-full">
+                    <p className="text-sm font-semibold truncate px-2">{agent.name.split('@')[0]}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Rank #{index + 1}</p>
+                  </div>
+                  <div className="grid grid-cols-2 w-full gap-2 pt-2">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 p-2 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-tight">Resolved</p>
+                      <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">{agent.resolved}</p>
+                    </div>
+                    <div className="bg-muted/50 p-2 rounded-xl border border-border/50">
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Total</p>
+                      <p className="text-lg font-bold text-foreground">{agent.total}</p>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div className="col-span-full py-20 text-center flex flex-col items-center gap-4">
+                  <Trophy className="w-10 h-10 text-muted-foreground/30" />
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Leadboard data sync in progress...</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Global Controls */}
         <div className="bg-card p-8 rounded-3xl shadow-2xl shadow-black/5 border border-border/50 flex flex-col lg:flex-row gap-8 items-center">
