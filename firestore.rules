@@ -1,9 +1,9 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Development mode: Allow all read and write operations for any authenticated user.
-    // This ensures a smooth experience for testing the BPO System workflows.
+    // This provides a smooth experience for testing the BPO Call Center System.
+    // Trigger update: 2024-05-22T10:00:00Z
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

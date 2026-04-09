@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -15,12 +14,11 @@ import {
   CheckCircle2, 
   PlayCircle,
   Loader2,
-  ListTodo,
   AlertCircle,
   History
 } from "lucide-react"
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
-import { collection, addDoc, serverTimestamp, query, where, orderBy } from "firebase/firestore"
+import { collection, addDoc, serverTimestamp, query, where } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 
 export default function UserDashboard() {
@@ -40,16 +38,23 @@ export default function UserDashboard() {
     }
   }, [user, isUserLoading, router])
 
+  // Removed orderBy from the query to prevent missing index errors (Permission Denied)
   const callsQuery = useMemoFirebase(() => {
     if (!user || isUserLoading) return null
     return query(
       collection(db, 'callRecords'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', user.uid)
     )
   }, [db, user, isUserLoading])
 
   const { data: calls, isLoading: callsLoading } = useCollection(callsQuery)
+
+  // Sort calls in memory to ensure recent records appear first without requiring a composite index
+  const sortedCalls = calls ? [...calls].sort((a, b) => {
+    const timeA = a.createdAt?.seconds || 0;
+    const timeB = b.createdAt?.seconds || 0;
+    return timeB - timeA;
+  }) : [];
 
   const handleAddCall = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -101,7 +106,6 @@ export default function UserDashboard() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Input Section */}
         <div className="lg:col-span-4">
           <Card className="border-none shadow-xl shadow-slate-200/50 sticky top-24 ring-1 ring-slate-100">
             <CardHeader className="bg-slate-50/50 border-b rounded-t-lg">
@@ -151,7 +155,6 @@ export default function UserDashboard() {
           </Card>
         </div>
 
-        {/* History Section */}
         <div className="lg:col-span-8 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -159,7 +162,7 @@ export default function UserDashboard() {
               <h2 className="text-2xl font-black text-slate-800 tracking-tight">Personal Records</h2>
             </div>
             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full">
-              {calls?.length || 0} Total
+              {sortedCalls.length} Total
             </div>
           </div>
           
@@ -169,7 +172,7 @@ export default function UserDashboard() {
                 <Loader2 className="animate-spin text-primary w-10 h-10" />
                 <p className="text-sm text-slate-400 font-medium">Fetching History...</p>
               </div>
-            ) : calls?.map((call) => (
+            ) : sortedCalls.map((call) => (
               <Card key={call.id} className="border-none shadow-md hover:shadow-xl transition-all duration-300 group ring-1 ring-slate-100 overflow-hidden">
                 <CardContent className="p-0">
                   <div className="flex items-stretch">
@@ -195,7 +198,7 @@ export default function UserDashboard() {
                 </CardContent>
               </Card>
             ))}
-            {!callsLoading && calls?.length === 0 && (
+            {!callsLoading && sortedCalls.length === 0 && (
               <div className="text-center py-32 bg-white rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center space-y-3">
                 <div className="p-4 bg-slate-50 rounded-full">
                   <AlertCircle className="w-8 h-8 text-slate-300" />

@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -7,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
-  ShieldCheck, 
   CheckCircle2, 
   PlayCircle,
   Loader2,
@@ -19,8 +17,8 @@ import {
   Clock,
   LayoutDashboard
 } from "lucide-react"
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from "@/firebase"
-import { collection, doc, updateDoc, query, limit, orderBy, where } from "firebase/firestore"
+import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase"
+import { collection, doc, updateDoc, query, limit } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -42,15 +40,11 @@ export default function AdminDashboard() {
     }
   }, [user, isUserLoading, isAdmin, router])
 
+  // Removed where/orderBy from query to prevent missing index errors
   const allCallsQuery = useMemoFirebase(() => {
     if (!user || !isAdmin) return null;
-    let baseQuery = query(collection(db, 'callRecords'), orderBy('createdAt', 'desc'), limit(150));
-    
-    if (filterStatus !== "all") {
-      baseQuery = query(collection(db, 'callRecords'), where('status', '==', filterStatus), orderBy('createdAt', 'desc'), limit(150));
-    }
-    return baseQuery;
-  }, [db, user, isAdmin, filterStatus])
+    return query(collection(db, 'callRecords'), limit(200));
+  }, [db, user, isAdmin])
 
   const { data: calls, isLoading: callsLoading } = useCollection(allCallsQuery)
 
@@ -64,11 +58,20 @@ export default function AdminDashboard() {
     }
   }
 
-  const filteredCalls = calls?.filter(call => 
-    call.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    call.issue.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    call.assignedAgent.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Filter and sort in memory
+  const processedCalls = calls ? calls
+    .filter(call => {
+      const matchesSearch = call.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          call.issue.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          call.assignedAgent.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === 'all' || call.status === filterStatus;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    }) : [];
 
   const stats = {
     total: calls?.length || 0,
@@ -101,7 +104,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in fade-in duration-1000">
-      {/* Header & Stats */}
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
@@ -125,7 +127,6 @@ export default function AdminDashboard() {
           <StatCard title="Total Closed" value={stats.closed} icon={<CheckCircle2 className="w-4 h-4" />} color="emerald" />
         </div>
 
-        {/* Filters */}
         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 items-center">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -152,7 +153,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Global Table Area */}
         <Card className="border-none shadow-2xl shadow-slate-200/50 overflow-hidden ring-1 ring-slate-100">
           <CardHeader className="bg-white border-b px-6 py-4 flex flex-row items-center justify-between">
             <div>
@@ -165,7 +165,7 @@ export default function AdminDashboard() {
             <div className="divide-y divide-slate-100">
               {callsLoading ? (
                 <div className="flex justify-center py-32"><Loader2 className="animate-spin text-primary w-12 h-12" /></div>
-              ) : filteredCalls?.map((call) => (
+              ) : processedCalls.map((call) => (
                 <div key={call.id} className="p-6 bg-white hover:bg-slate-50/30 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-3">
@@ -206,7 +206,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
-              {!callsLoading && filteredCalls?.length === 0 && (
+              {!callsLoading && processedCalls.length === 0 && (
                 <div className="text-center py-32 text-slate-400 flex flex-col items-center space-y-2">
                   <Search className="w-8 h-8 text-slate-200" />
                   <p className="font-medium italic">No matching records found in the audit logs.</p>
