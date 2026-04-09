@@ -40,15 +40,15 @@ export default function UserDashboard() {
     if (!isUserLoading && !user) router.push('/')
   }, [user, isUserLoading, router])
 
-  // Gate query to ensure user.uid is available before querying
+  // Gate query to ensure user.uid is available AND authenticated before querying
   const callsQuery = useMemoFirebase(() => {
-    if (!user || !user.uid) return null
+    if (!user || !user.uid || isUserLoading) return null
     return query(
       collection(db, 'calls'),
       where('userId', '==', user.uid),
       orderBy('createdAt', 'desc')
     )
-  }, [db, user])
+  }, [db, user, isUserLoading])
 
   const { data: calls, isLoading: callsLoading } = useCollection(callsQuery)
 

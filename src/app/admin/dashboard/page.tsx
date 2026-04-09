@@ -48,6 +48,7 @@ export default function AdminDashboard() {
 
   // Gate the query so it ONLY runs if the user is authorized AND data is ready
   const allCallsQuery = useMemoFirebase(() => {
+    // Explicitly check for isAdmin and ensured loading states are finished
     if (!user || !isAdmin || isUserLoading || profileLoading) return null;
     return query(collection(db, 'calls'), orderBy('createdAt', 'desc'), limit(100));
   }, [db, user, isAdmin, isUserLoading, profileLoading])

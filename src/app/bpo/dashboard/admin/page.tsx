@@ -44,9 +44,10 @@ export default function BPOAdminDashboard() {
   }, [user, isUserLoading, profileLoading, isAdmin, router])
 
   const allCallsQuery = useMemoFirebase(() => {
-    if (!user || !isAdmin) return null;
+    // Prevent the query from running until we're sure the user is an admin
+    if (!user || !isAdmin || isUserLoading || profileLoading) return null;
     return query(collection(db, 'calls'), orderBy('createdAt', 'desc'), limit(100));
-  }, [db, user, isAdmin])
+  }, [db, user, isAdmin, isUserLoading, profileLoading])
 
   const { data: calls, isLoading: callsLoading } = useCollection(allCallsQuery)
 
@@ -68,7 +69,7 @@ export default function BPOAdminDashboard() {
     }
   }
 
-  if (isUserLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>
+  if (isUserLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-primary" /></div>
 
   if (!isAdmin) return null;
 
@@ -120,7 +121,7 @@ export default function BPOAdminDashboard() {
           <CardContent className="p-0">
             <div className="divide-y divide-slate-100">
               {callsLoading ? (
-                <div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>
+                <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" /></div>
               ) : calls?.map((call) => (
                 <div key={call.id} className="p-6 bg-white hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="space-y-1 flex-1">
