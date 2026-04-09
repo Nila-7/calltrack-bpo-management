@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { UserPlus, Mail, Lock, Loader2, PhoneCall } from "lucide-react"
+import { UserPlus, Mail, Lock, Loader2, PhoneCall, AlertCircle } from "lucide-react"
 import { useAuth, useFirestore } from "@/firebase"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function UserSignupPage() {
   const router = useRouter()
@@ -30,7 +31,6 @@ export default function UserSignupPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       
-      // Assign Admin role if the email matches the master admin email
       const isAdminEmail = email.toLowerCase() === 'admin@gmail.com'
       
       await setDoc(doc(db, 'userProfiles', userCredential.user.uid), {
@@ -40,15 +40,14 @@ export default function UserSignupPage() {
       })
 
       toast({
-        title: isAdminEmail ? "Admin Account Created" : "Agent Registration Complete",
+        title: isAdminEmail ? "Admin Account Initialized" : "Agent Registration Complete",
         description: isAdminEmail 
-          ? "You can now log in via the Admin Console." 
-          : "Your agent account has been provisioned.",
+          ? "The System Administrator has been successfully registered. You can now use the Admin Console." 
+          : "Your agent identity has been provisioned.",
       })
       
-      // Redirect based on role
       if (isAdminEmail) {
-        router.push('/admin/dashboard')
+        router.push('/admin/login')
       } else {
         router.push('/user/dashboard')
       }
@@ -64,28 +63,28 @@ export default function UserSignupPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4">
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 bg-slate-50">
       <Card className="w-full max-w-md shadow-2xl border-none ring-1 ring-slate-200">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center">
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <PhoneCall className="w-8 h-8 text-primary" />
+            <div className="p-4 bg-primary/10 rounded-2xl">
+              <PhoneCall className="w-10 h-10 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Agent Registration</CardTitle>
-          <CardDescription>Join the BPO Enterprise Network</CardDescription>
+          <CardTitle className="text-3xl font-black tracking-tight text-slate-900 uppercase">Agent Registration</CardTitle>
+          <CardDescription>BPO Enterprise Resource Planning</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Work Email</Label>
+              <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-slate-500">Professional Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input 
                   id="email" 
                   type="email" 
                   placeholder="agent@bpo-system.com" 
-                  className="pl-10 h-11"
+                  className="pl-10 h-12 bg-slate-50/50 border-none ring-1 ring-slate-200 focus-visible:ring-primary"
                   required 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -93,30 +92,40 @@ export default function UserSignupPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Security Password</Label>
+              <Label htmlFor="password" title="Set your password (e.g. admin@123)" className="text-xs font-bold uppercase tracking-wider text-slate-500">Security Access Code</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input 
                   id="password" 
                   type="password" 
                   placeholder="••••••••"
-                  className="pl-10 h-11"
+                  className="pl-10 h-12 bg-slate-50/50 border-none ring-1 ring-slate-200 focus-visible:ring-primary"
                   required 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              <p className="text-[10px] text-slate-400 italic">Must be at least 6 characters for security compliance.</p>
+              <p className="text-[10px] text-slate-400 italic font-medium">Minimum 6 characters required for encryption standards.</p>
             </div>
-            <Button className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/20" disabled={loading}>
+
+            {email.toLowerCase() === 'admin@gmail.com' && (
+              <Alert className="bg-amber-50 border-amber-200">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-xs text-amber-700 font-medium">
+                  Initializing the Master Administrator identity. After signup, you will be redirected to the Admin Console.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <Button className="w-full h-12 text-base font-black uppercase tracking-widest shadow-lg shadow-primary/20" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UserPlus className="w-5 h-5 mr-2" />}
-              Create Agent ID
+              Create Identity
             </Button>
           </CardContent>
         </form>
-        <CardFooter className="text-center border-t bg-slate-50/50 pt-6">
-          <Button variant="link" className="w-full text-slate-600" onClick={() => router.push('/user/login')}>
-            Already have an Agent ID? <span className="text-primary ml-1">Log In</span>
+        <CardFooter className="flex flex-col space-y-4 text-center border-t bg-slate-50/30 pt-6">
+          <Button variant="link" className="text-sm font-bold text-slate-600 hover:text-primary" onClick={() => router.push('/user/login')}>
+            Already registered? <span className="text-primary ml-1">Sign In</span>
           </Button>
         </CardFooter>
       </Card>
