@@ -1,14 +1,14 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { UserPlus, Mail, Lock, Loader2, PhoneCall, AlertCircle } from "lucide-react"
-import { useAuth, useFirestore } from "@/firebase"
+import { useAuth, useFirestore, useUser } from "@/firebase"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
@@ -18,11 +18,22 @@ export default function UserSignupPage() {
   const router = useRouter()
   const auth = useAuth()
   const db = useFirestore()
+  const { user, isUserLoading } = useUser()
   const { toast } = useToast()
   
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      if (user.email?.toLowerCase() === 'admin@gmail.com') {
+        router.push("/admin/dashboard")
+      } else {
+        router.push("/user/dashboard")
+      }
+    }
+  }, [user, isUserLoading, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,12 +53,12 @@ export default function UserSignupPage() {
       toast({
         title: isAdminEmail ? "Admin Account Initialized" : "Agent Registration Complete",
         description: isAdminEmail 
-          ? "The System Administrator has been successfully registered. You can now use the Admin Console." 
+          ? "The System Administrator has been successfully registered." 
           : "Your agent identity has been provisioned.",
       })
       
       if (isAdminEmail) {
-        router.push('/admin/login')
+        router.push('/admin/dashboard')
       } else {
         router.push('/user/dashboard')
       }
@@ -60,6 +71,14 @@ export default function UserSignupPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -117,7 +136,7 @@ export default function UserSignupPage() {
               </Alert>
             )}
 
-            <Button className="w-full h-12 text-base font-black uppercase tracking-widest shadow-lg shadow-primary/20" disabled={loading}>
+            <Button type="submit" className="w-full h-12 text-base font-black uppercase tracking-widest shadow-lg shadow-primary/20" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UserPlus className="w-5 h-5 mr-2" />}
               Create Identity
             </Button>

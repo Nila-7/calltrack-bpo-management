@@ -1,25 +1,36 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PhoneCall, Lock, Loader2, KeyRound, Mail } from "lucide-react"
-import { useAuth } from "@/firebase"
+import { useAuth, useUser } from "@/firebase"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
 
 export default function UserLoginPage() {
   const router = useRouter()
   const auth = useAuth()
+  const { user, isUserLoading } = useUser()
   const { toast } = useToast()
   
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      if (user.email?.toLowerCase() === 'admin@gmail.com') {
+        router.push("/admin/dashboard")
+      } else {
+        router.push("/user/dashboard")
+      }
+    }
+  }, [user, isUserLoading, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,6 +57,14 @@ export default function UserLoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -94,7 +113,7 @@ export default function UserLoginPage() {
                 />
               </div>
             </div>
-            <Button className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/20" disabled={loading}>
+            <Button type="submit" className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/20" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <KeyRound className="w-5 h-5 mr-2" />}
               Sign In to Terminal
             </Button>
