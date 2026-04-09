@@ -16,8 +16,8 @@ export default function RootRedirect() {
         // No session, go to agent login by default
         router.push("/user/login")
       } else {
-        // Active session, route based on identity
-        if (user.email?.toLowerCase() === 'admin@gmail.com') {
+        // Active session, strictly route based on identity
+        if (user.email === 'admin@gmail.com') {
           router.push("/admin/dashboard")
         } else {
           router.push("/user/dashboard")

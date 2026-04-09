@@ -24,7 +24,7 @@ export default function UserLoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      if (user.email?.toLowerCase() === 'admin@gmail.com') {
+      if (user.email === 'admin@gmail.com') {
         router.push("/admin/dashboard")
       } else {
         router.push("/user/dashboard")
@@ -36,17 +36,15 @@ export default function UserLoginPage() {
     e.preventDefault()
     setLoading(true)
     try {
-      const trimmedEmail = email.trim().toLowerCase()
-      await signInWithEmailAndPassword(auth, trimmedEmail, password)
+      const normalizedEmail = email.trim().toLowerCase()
+      await signInWithEmailAndPassword(auth, normalizedEmail, password)
       
       toast({
         title: "Access Authorized",
         description: `Identity verified. Synchronizing dashboard...`,
       })
-
-      // The useEffect will handle the redirect based on email
     } catch (error: any) {
-      console.error("Login Error:", error)
+      console.error("USER_AUTH_ERROR:", error)
       toast({
         variant: "destructive",
         title: "Authentication Failed",
@@ -119,7 +117,7 @@ export default function UserLoginPage() {
         </form>
         <CardFooter className="flex flex-col space-y-4 text-center border-t bg-slate-50/50 pt-6">
           <Button variant="link" className="text-sm font-medium text-slate-600" onClick={() => router.push('/user/signup')}>
-            Need an identity? <span className="text-primary ml-1 font-bold">Register Agent ID</span>
+            Don't have an account? <span className="text-primary ml-1">Create Agent ID</span>
           </Button>
           <div className="flex justify-center">
             <button 

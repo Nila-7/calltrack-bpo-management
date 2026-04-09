@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { ShieldCheck, Lock, Loader2, Mail, ChevronLeft, AlertCircle } from "lucide-react"
 import { useAuth, useUser } from "@/firebase"
-import { signInWithEmailAndPassword } from "firebase/auth"
+import { signInWithEmailAndPassword, signOut } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
@@ -27,10 +27,8 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      if (user.email?.toLowerCase() === 'admin@gmail.com') {
+      if (user.email === 'admin@gmail.com') {
         router.push("/admin/dashboard")
-      } else {
-        router.push("/user/dashboard")
       }
     }
   }, [user, isUserLoading, router])
@@ -38,33 +36,38 @@ export default function AdminLoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    
-    const trimmedEmail = email.trim().toLowerCase()
-    if (trimmedEmail !== 'admin@gmail.com') {
-      setError("Unauthorized Identity. This console is strictly reserved for the Master Administrator.")
-      return
-    }
-
     setLoading(true)
+    
+    const normalizedEmail = email.trim().toLowerCase()
+
     try {
-      await signInWithEmailAndPassword(auth, trimmedEmail, password)
-      
-      toast({
-        title: "Access Authorized",
-        description: "Welcome back, System Administrator.",
-      })
-      
-      router.push("/admin/dashboard")
+      // 1. Perform Authentication
+      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password)
+      const authenticatedUser = userCredential.user
+
+      // 2. Strict Admin Email Check
+      if (authenticatedUser.email === 'admin@gmail.com') {
+        toast({
+          title: "Access Authorized",
+          description: "Welcome back, System Administrator.",
+        })
+        router.push("/admin/dashboard")
+      } else {
+        // 3. Not the Admin - Force Sign Out
+        await signOut(auth)
+        setError("Unauthorized Identity. This terminal is strictly reserved for the Master Administrator.")
+      }
     } catch (err: any) {
-      console.error("Admin Login Error:", err)
+      console.error("ADMIN_AUTH_CRITICAL_FAILURE:", err)
+      
       if (err.code === 'auth/user-not-found') {
-        setError("Admin identity not found. Please register admin@gmail.com at the Agent Portal first.")
+        setError("Admin identity not found. Please ensure your account is registered.")
       } else if (err.code === 'auth/wrong-password') {
         setError("Access key rejected. Please verify your administrative credentials.")
       } else if (err.code === 'auth/invalid-credential') {
         setError("Invalid credentials. Please verify your email and access key.")
       } else {
-        setError("Identity verification failed. Ensure your account is registered.")
+        setError(err.message || "Identity verification failed. Please try again.")
       }
     } finally {
       setLoading(false)

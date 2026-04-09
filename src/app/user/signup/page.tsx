@@ -27,7 +27,7 @@ export default function UserSignupPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      if (user.email?.toLowerCase() === 'admin@gmail.com') {
+      if (user.email === 'admin@gmail.com') {
         router.push("/admin/dashboard")
       } else {
         router.push("/user/dashboard")
@@ -38,23 +38,23 @@ export default function UserSignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Normalize email: trim and lowercase
-    let normalizedEmail = email.trim().toLowerCase()
+    const normalizedEmail = email.trim().toLowerCase()
     
-    // Auto-fix common typo for admin email
+    // Safety check for admin typo
+    let finalEmail = normalizedEmail
     if (normalizedEmail.includes('admin@gamil.com')) {
-      normalizedEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
-      setEmail(normalizedEmail)
+      finalEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
     }
 
     setLoading(true)
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
+      const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, password)
       
-      const isAdminEmail = normalizedEmail === 'admin@gmail.com'
+      const isAdminEmail = finalEmail === 'admin@gmail.com'
       
+      // Store minimal profile data
       await setDoc(doc(db, 'userProfiles', userCredential.user.uid), {
-        email: normalizedEmail,
+        email: finalEmail,
         role: isAdminEmail ? 'Admin' : 'User',
         createdAt: new Date().toISOString()
       })
@@ -65,13 +65,8 @@ export default function UserSignupPage() {
           ? "The System Administrator has been initialized." 
           : "Your account is now active.",
       })
-      
-      if (isAdminEmail) {
-        router.push('/admin/dashboard')
-      } else {
-        router.push('/user/dashboard')
-      }
     } catch (error: any) {
+      console.error("SIGNUP_ERROR:", error)
       let message = error.message;
       if (error.code === 'auth/email-already-in-use') {
         message = "This identity is already active. Please sign in to the Portal."
@@ -125,7 +120,7 @@ export default function UserSignupPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" title="Set your password" className="text-xs font-bold uppercase tracking-wider text-slate-500">Security Access Code</Label>
+              <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-slate-500">Security Access Code</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input 
