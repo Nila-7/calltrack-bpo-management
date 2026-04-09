@@ -1,14 +1,12 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { ShieldCheck, Lock, Loader2, Mail, ChevronLeft, AlertCircle } from "lucide-react"
+import { ShieldCheck, Lock, Loader2, KeyRound, User as UserIcon, MessageSquare, AlertCircle } from "lucide-react"
 import { useAuth, useUser } from "@/firebase"
 import { signInWithEmailAndPassword, signOut } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -41,11 +39,9 @@ export default function AdminLoginPage() {
     const normalizedEmail = email.trim().toLowerCase()
 
     try {
-      // 1. Perform Authentication
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password)
       const authenticatedUser = userCredential.user
 
-      // 2. Strict Admin Email Check
       if (authenticatedUser.email === 'admin@gmail.com') {
         toast({
           title: "Access Authorized",
@@ -53,19 +49,13 @@ export default function AdminLoginPage() {
         })
         router.push("/admin/dashboard")
       } else {
-        // 3. Not the Admin - Force Sign Out
         await signOut(auth)
         setError("Unauthorized Identity. This terminal is strictly reserved for the Master Administrator.")
       }
     } catch (err: any) {
       console.error("ADMIN_AUTH_CRITICAL_FAILURE:", err)
-      
-      if (err.code === 'auth/user-not-found') {
-        setError("Admin identity not found. Please ensure your account is registered.")
-      } else if (err.code === 'auth/wrong-password') {
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setError("Access key rejected. Please verify your administrative credentials.")
-      } else if (err.code === 'auth/invalid-credential') {
-        setError("Invalid credentials. Please verify your email and access key.")
       } else {
         setError(err.message || "Identity verification failed. Please try again.")
       }
@@ -76,50 +66,67 @@ export default function AdminLoginPage() {
 
   if (isUserLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#111827]">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 bg-slate-50">
-      <Card className="w-full max-w-md shadow-2xl border-none ring-1 ring-slate-200">
-        <CardHeader className="text-center space-y-2 pb-8">
-          <div className="flex justify-between items-center mb-4">
-            <Button variant="ghost" size="sm" className="text-slate-500 hover:text-primary h-8 px-2" onClick={() => router.push('/user/login')}>
-              <ChevronLeft className="w-4 h-4 mr-1" /> Agent Portal
-            </Button>
-            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 uppercase tracking-[0.2em] text-[10px] font-black">Secure Terminal</Badge>
-          </div>
+    <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[#111827] pointer-events-none" />
+      
+      <Card className="w-full max-w-[450px] shadow-2xl border-none rounded-3xl z-10 bg-white p-8 space-y-8">
+        <div className="text-center space-y-2">
           <div className="flex justify-center">
-            <div className="p-4 bg-primary/10 rounded-2xl">
-              <ShieldCheck className="w-10 h-10 text-primary" />
+            <div className="relative p-4 border-2 border-blue-500/20 rounded-2xl">
+              <ShieldCheck className="w-12 h-12 text-blue-500" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                 <div className="w-6 h-6 bg-blue-500 rounded-sm opacity-10" />
+              </div>
             </div>
           </div>
-          <CardTitle className="text-3xl font-black tracking-tight text-slate-900">Admin Console</CardTitle>
-          <CardDescription>BPO Enterprise Command & Control</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive" className="bg-destructive/5 text-destructive border-destructive/20 animate-in fade-in slide-in-from-top-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Access Denied</AlertTitle>
-                <AlertDescription className="text-xs">
-                  {error}
-                </AlertDescription>
-              </Alert>
-            )}
+          <h1 className="text-4xl font-black tracking-tight text-[#111827]">IntelliSecureX</h1>
+          <p className="text-slate-400 text-sm font-medium">Identity-Aware Document Deception Engine</p>
+        </div>
+
+        {/* Tab Selection */}
+        <div className="flex p-1 bg-slate-50 rounded-2xl border border-slate-100">
+          <button 
+            onClick={() => router.push('/user/login')}
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-blue-500 font-bold text-sm hover:bg-white transition-all"
+          >
+            <UserIcon className="w-4 h-4" />
+            User Portal
+          </button>
+          <button 
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-500/20 transition-all"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            Admin Console
+          </button>
+        </div>
+
+        {error && (
+          <Alert variant="destructive" className="bg-destructive/5 text-destructive border-destructive/20 rounded-2xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle className="font-bold">Access Denied</AlertTitle>
+            <AlertDescription className="text-xs">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-slate-500">Administrator ID</Label>
+              <Label className="text-sm font-bold text-[#111827] ml-1">Username</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input 
-                  id="email" 
                   type="email" 
                   placeholder="admin@gmail.com" 
-                  className="pl-10 h-12 bg-slate-50/50 border-none ring-1 ring-slate-200 focus-visible:ring-primary"
+                  className="pl-12 h-14 bg-slate-50 border-none rounded-2xl focus-visible:ring-blue-500 font-medium"
                   required 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -127,30 +134,51 @@ export default function AdminLoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-slate-500">Access Key</Label>
+              <Label className="text-sm font-bold text-[#111827] ml-1">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input 
-                  id="password" 
                   type="password" 
                   placeholder="••••••••"
-                  className="pl-10 h-12 bg-slate-50/50 border-none ring-1 ring-slate-200 focus-visible:ring-primary"
+                  className="pl-12 h-14 bg-slate-50 border-none rounded-2xl focus-visible:ring-blue-500 font-medium"
                   required 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full h-12 text-base font-black uppercase tracking-widest shadow-lg shadow-primary/20" disabled={loading}>
-              {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <ShieldCheck className="w-5 h-5 mr-2" />}
-              Authorize Terminal
-            </Button>
-          </CardContent>
+          </div>
+
+          <Button type="submit" className="w-full h-14 bg-blue-500 hover:bg-blue-600 rounded-2xl text-lg font-bold shadow-xl shadow-blue-500/25 transition-all" disabled={loading}>
+            {loading ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : <KeyRound className="w-6 h-6 mr-2" />}
+            Sign In
+          </Button>
         </form>
-        <CardFooter className="flex justify-center border-t bg-slate-50/30 py-6">
-          <p className="text-[10px] text-slate-400 uppercase font-black tracking-[0.3em]">System Identity Verification Required</p>
-        </CardFooter>
+
+        <div className="pt-4 text-center border-t border-slate-50 space-y-6">
+          <button 
+            onClick={() => router.push('/user/signup')}
+            className="text-sm font-bold text-slate-500 hover:text-blue-500 transition-colors"
+          >
+            Need an account? <span className="text-blue-500">Sign Up Now</span>
+          </button>
+          
+          <div className="text-[10px] font-black text-slate-300 tracking-[0.4em] uppercase">
+            SECURE SESSION GATEWAY
+          </div>
+        </div>
       </Card>
+
+      {/* Floating Elements */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-2 bg-[#1f2937] text-slate-400 text-[10px] font-black tracking-[0.2em] rounded-full border border-white/5 z-50">
+        SECURE SESSION GATEWAY
+      </div>
+
+      <div className="fixed bottom-8 right-8 z-50">
+        <button className="p-4 bg-blue-500 text-white rounded-full shadow-2xl shadow-blue-500/40 hover:scale-110 transition-transform">
+          <MessageSquare className="w-6 h-6" />
+        </button>
+      </div>
     </div>
   )
 }
