@@ -37,7 +37,10 @@ export default function UserDashboard() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (!isUserLoading && !user) router.push('/')
+    // Wait for authentication state to be determined before redirecting
+    if (!isUserLoading && !user) {
+      router.push('/')
+    }
   }, [user, isUserLoading, router])
 
   // Gate query to ensure user is authenticated and loading state is finished
@@ -70,7 +73,7 @@ export default function UserDashboard() {
       setAgent("")
       toast({ title: "Call Recorded", description: "The call record has been added to the queue." })
     } catch (err: any) {
-      // Handled globally
+      // Errors are handled by the global error listener
     } finally {
       setSubmitting(false)
     }
@@ -87,9 +90,14 @@ export default function UserDashboard() {
 
   if (isUserLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <Loader2 className="animate-spin text-primary w-8 h-8" />
+      <div className="text-center space-y-3">
+        <Loader2 className="animate-spin text-primary w-10 h-10 mx-auto" />
+        <p className="text-slate-500 font-medium">Loading Workspace...</p>
+      </div>
     </div>
   )
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-slate-50 font-body">

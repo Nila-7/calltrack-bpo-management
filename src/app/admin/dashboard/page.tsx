@@ -6,9 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { 
-  ShieldCheck, 
   LogOut, 
-  Clock, 
   CheckCircle2, 
   PlayCircle,
   Loader2,
@@ -35,22 +33,23 @@ export default function AdminDashboard() {
   }, [db, user]);
   const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
 
-  // Robust admin check - prioritize the explicitly defined admin email
+  // Robust admin check
   const isAdmin = user?.email === 'admin@gmail.com' || profile?.role === 'Admin';
 
   useEffect(() => {
+    // Wait for all loading states before making a routing decision
     if (!isUserLoading && !profileLoading) {
       if (!user) {
         router.push('/')
       } else if (!isAdmin) {
+        // If they logged in as a regular agent, send them to the agent portal
         router.push('/user/dashboard')
       }
     }
   }, [user, isUserLoading, profileLoading, isAdmin, router])
 
-  // Gate the query so it ONLY runs if the user is authorized AND data is ready
+  // Gate the query: Only run if we are 100% sure the user is an authorized admin
   const allCallsQuery = useMemoFirebase(() => {
-    // Explicitly wait for all loading states and admin verification
     if (!user || isUserLoading || profileLoading || !isAdmin) return null;
     return query(collection(db, 'calls'), orderBy('createdAt', 'desc'), limit(100));
   }, [db, user, isAdmin, isUserLoading, profileLoading])
@@ -59,8 +58,9 @@ export default function AdminDashboard() {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      await updateDoc(doc(db, 'calls', id), { status })
-      toast({ title: "Status Updated", description: `Call is now ${status}.` })
+      const docRef = doc(db, 'calls', id);
+      await updateDoc(docRef, { status });
+      toast({ title: "Status Updated", description: `Call is now ${status}.` });
     } catch (err: any) {
       // Permission errors are handled by the global listener
     }
@@ -86,6 +86,7 @@ export default function AdminDashboard() {
     )
   }
 
+  // Double check admin status before rendering sensitive UI
   if (!isAdmin) return null;
 
   return (
@@ -146,7 +147,7 @@ export default function AdminDashboard() {
                     </div>
                     <p className="text-sm text-slate-500">{call.issue}</p>
                     <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                      Agent: {call.assignedAgent} | Created: {call.createdAt?.toDate?.().toLocaleString()}
+                      Agent: {call.assignedAgent} | Created: {call.createdAt?.toDate?.().toLocaleString() || 'N/A'}
                     </div>
                   </div>
                   
