@@ -1,18 +1,18 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { UserPlus, Mail, Lock, Loader2, PhoneCall, AlertCircle } from "lucide-react"
+import { PhoneCall, Mail, Lock, Loader2, UserPlus, AlertCircle } from "lucide-react"
 import { useAuth, useFirestore, useUser } from "@/firebase"
 import { createUserWithEmailAndPassword } from "firebase/auth"
 import { doc, setDoc } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 export default function UserSignupPage() {
   const router = useRouter()
@@ -27,11 +27,7 @@ export default function UserSignupPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      if (user.email === 'admin@gmail.com') {
-        router.push("/admin/dashboard")
-      } else {
-        router.push("/user/dashboard")
-      }
+      router.push("/")
     }
   }, [user, isUserLoading, router])
 
@@ -39,8 +35,6 @@ export default function UserSignupPage() {
     e.preventDefault()
 
     const normalizedEmail = email.trim().toLowerCase()
-    
-    // Safety check for admin typo
     let finalEmail = normalizedEmail
     if (normalizedEmail.includes('admin@gamil.com')) {
       finalEmail = normalizedEmail.replace('gamil.com', 'gmail.com')
@@ -49,10 +43,8 @@ export default function UserSignupPage() {
     setLoading(true)
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, password)
-      
       const isAdminEmail = finalEmail === 'admin@gmail.com'
       
-      // Store minimal profile data
       await setDoc(doc(db, 'userProfiles', userCredential.user.uid), {
         email: finalEmail,
         role: isAdminEmail ? 'Admin' : 'User',
@@ -60,22 +52,17 @@ export default function UserSignupPage() {
       })
 
       toast({
-        title: isAdminEmail ? "Admin Authorized" : "Agent Identity Created",
-        description: isAdminEmail 
-          ? "The System Administrator has been initialized." 
-          : "Your account is now active.",
+        title: "Registration Successful",
+        description: "Your agent identity has been created.",
       })
     } catch (error: any) {
       console.error("SIGNUP_ERROR:", error)
-      let message = error.message;
-      if (error.code === 'auth/email-already-in-use') {
-        message = "This identity is already active. Please sign in to the Portal."
-      }
-      
       toast({
         variant: "destructive",
-        title: "Registration Interrupted",
-        description: message,
+        title: "Registration Failed",
+        description: error.code === 'auth/email-already-in-use' 
+          ? "This email is already registered." 
+          : "An error occurred during registration.",
       })
     } finally {
       setLoading(false)
@@ -84,77 +71,89 @@ export default function UserSignupPage() {
 
   if (isUserLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 bg-slate-50">
-      <Card className="w-full max-w-md shadow-2xl border-none ring-1 ring-slate-200">
-        <CardHeader className="text-center space-y-2">
+    <div className="min-h-screen flex items-center justify-center p-6 relative bg-background">
+      <div className="absolute top-8 right-8 z-50">
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-[500px] shadow-2xl border-none bg-card p-0 overflow-hidden rounded-[2rem]">
+        <div className="p-8 pb-0 text-center space-y-4">
           <div className="flex justify-center">
             <div className="p-4 bg-primary/10 rounded-2xl">
               <PhoneCall className="w-10 h-10 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-black tracking-tight text-slate-900 uppercase">Agent Registration</CardTitle>
-          <CardDescription>BPO Enterprise Resource Planning</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-slate-500">Professional Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="agent@bpo-system.com" 
-                  className="pl-10 h-12 bg-slate-50/50 border-none ring-1 ring-slate-200 focus-visible:ring-primary"
-                  required 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+          <div className="space-y-1">
+            <h1 className="text-4xl font-black tracking-tight text-foreground">CallTrack</h1>
+            <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Create New Agent ID</p>
+          </div>
+        </div>
+
+        <CardContent className="p-8 pt-6 space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Email Address</Label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    type="email" 
+                    placeholder="Enter email" 
+                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-medium"
+                    required 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-slate-500">Security Access Code</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="••••••••"
-                  className="pl-10 h-12 bg-slate-50/50 border-none ring-1 ring-slate-200 focus-visible:ring-primary"
-                  required 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Security Key</Label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    type="password" 
+                    placeholder="••••••••"
+                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-medium"
+                    required 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
-            {(email.toLowerCase().includes('admin@gmail.com') || email.toLowerCase().includes('admin@gamil.com')) && (
-              <Alert className="bg-amber-50 border-amber-200">
-                <AlertCircle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-xs text-amber-700 font-medium">
-                  Initializing System Administrator. Ensure the email is spelled correctly (admin@gmail.com).
+            {(email.toLowerCase().includes('admin@gmail.com')) && (
+              <Alert className="bg-primary/5 border-primary/20">
+                <AlertCircle className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-xs font-bold uppercase tracking-wider">
+                  System Admin Role Detected
                 </AlertDescription>
               </Alert>
             )}
 
-            <Button type="submit" className="w-full h-12 text-base font-black uppercase tracking-widest shadow-lg shadow-primary/20" disabled={loading}>
+            <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-xl text-base font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UserPlus className="w-5 h-5 mr-2" />}
               Create Identity
             </Button>
-          </CardContent>
-        </form>
-        <CardFooter className="flex flex-col space-y-4 text-center border-t bg-slate-50/30 pt-6">
-          <Button variant="link" className="text-sm font-bold text-slate-600 hover:text-primary" onClick={() => router.push('/user/login')}>
-            Already registered? <span className="text-primary ml-1">Sign In</span>
-          </Button>
-        </CardFooter>
+          </form>
+
+          <div className="pt-4 text-center border-t space-y-4">
+            <button 
+              onClick={() => router.push('/user/login')}
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              Already have an account? <span className="text-primary font-bold">Sign In</span>
+            </button>
+            <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.3em]">SECURE SESSION GATEWAY</p>
+          </div>
+        </CardContent>
       </Card>
     </div>
   )

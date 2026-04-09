@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --background: 210 40% 99%; /* #f8fafc equivalent */
-    --foreground: 222 47% 11%;
+    --background: 220 33% 98%;
+    --foreground: 224 71% 4%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 243 75% 59%; /* Rich Purple-Blue */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 47% 11%;
@@ -22,18 +22,18 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.75rem;
+    --ring: 243 75% 59%;
+    --radius: 1rem;
   }
   .dark {
-    --background: 222 47% 11%; /* #0f172a equivalent */
+    --background: 224 71% 4%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 13%;
+    --card: 224 71% 6%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 224 71% 4%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 243 75% 70%;
+    --primary-foreground: 224 71% 4%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -42,9 +42,9 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 25%;
+    --border: 217.2 32.6% 20%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 243 75% 70%;
   }
 }
 
@@ -54,5 +54,7 @@
   }
   body {
     @apply bg-background text-foreground font-body transition-colors duration-300;
+    background-image: radial-gradient(at 0% 0%, hsla(243, 75%, 59%, 0.05) 0px, transparent 50%),
+                      radial-gradient(at 100% 100%, hsla(243, 75%, 59%, 0.05) 0px, transparent 50%);
   }
 }

@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ShieldCheck, Lock, Loader2, KeyRound, AlertCircle } from "lucide-react"
+import { PhoneCall, Lock, Loader2, KeyRound, User as UserIcon, ShieldCheck, AlertCircle } from "lucide-react"
 import { useAuth, useUser } from "@/firebase"
 import { signInWithEmailAndPassword, signOut } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -44,17 +45,17 @@ export default function AdminLoginPage() {
 
       if (authenticatedUser.email === 'admin@gmail.com') {
         toast({
-          title: "Administrative Access Authorized",
+          title: "Admin Access Granted",
           description: "Welcome to the Command Center.",
         })
         router.push("/admin/dashboard")
       } else {
         await signOut(auth)
-        setError("Unauthorized Identity. This terminal is strictly reserved for the Master Administrator.")
+        setError("Access denied. This portal is strictly for system administrators.")
       }
     } catch (err: any) {
-      console.error("ADMIN_AUTH_CRITICAL_FAILURE:", err)
-      setError("Access key rejected. Please verify your administrative credentials.")
+      console.error("ADMIN_AUTH_FAILURE:", err)
+      setError("Authentication failed. Please check your credentials.")
     } finally {
       setLoading(false)
     }
@@ -69,74 +70,96 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden bg-background">
-      <Card className="w-full max-w-[500px] shadow-2xl border bg-card p-10 space-y-8 transition-all">
-        <div className="text-center space-y-3">
+    <div className="min-h-screen flex items-center justify-center p-6 relative bg-background">
+      <div className="absolute top-8 right-8 z-50">
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-[500px] shadow-2xl border-none bg-card p-0 overflow-hidden rounded-[2rem]">
+        <div className="p-8 pb-0 text-center space-y-4">
           <div className="flex justify-center">
-            <div className="p-4 bg-destructive/10 rounded-2xl border border-destructive/20">
-              <ShieldCheck className="w-14 h-14 text-destructive" />
+            <div className="p-4 bg-primary/10 rounded-2xl">
+              <PhoneCall className="w-10 h-10 text-primary" />
             </div>
           </div>
-          <h1 className="text-4xl font-black tracking-tight text-foreground uppercase">Master Console</h1>
-          <p className="text-muted-foreground text-sm font-medium tracking-wide uppercase">CallTrack BPO Command Center</p>
+          <div className="space-y-1">
+            <h1 className="text-4xl font-black tracking-tight text-foreground">CallTrack</h1>
+            <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Smart BPO Call Management System</p>
+          </div>
         </div>
 
-        {error && (
-          <Alert variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/5">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle className="font-black uppercase text-xs tracking-widest">Access Denied</AlertTitle>
-            <AlertDescription className="text-xs font-medium">
-              {error}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Admin Username</Label>
-              <div className="relative">
-                <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input 
-                  type="email" 
-                  placeholder="admin@gmail.com" 
-                  className="pl-12 h-14 bg-muted/20 border-border rounded-xl focus-visible:ring-destructive font-medium"
-                  required 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Admin Access Key</Label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input 
-                  type="password" 
-                  placeholder="••••••••"
-                  className="pl-12 h-14 bg-muted/20 border-border rounded-xl focus-visible:ring-destructive font-medium"
-                  required 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
+        <CardContent className="p-8 pt-6 space-y-8">
+          {/* Portal Toggle */}
+          <div className="grid grid-cols-2 p-1 bg-muted rounded-xl gap-1">
+            <Button 
+              variant="ghost" 
+              className="rounded-lg font-bold text-xs text-muted-foreground hover:text-foreground h-10"
+              onClick={() => router.push('/user/login')}
+            >
+              <UserIcon className="w-3.5 h-3.5 mr-2" />
+              User Portal
+            </Button>
+            <Button 
+              variant="default" 
+              className="rounded-lg font-bold text-xs shadow-sm h-10"
+              onClick={() => router.push('/admin/login')}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 mr-2" />
+              Admin Console
+            </Button>
           </div>
 
-          <Button type="submit" className="w-full h-14 bg-destructive hover:bg-destructive/90 text-white rounded-xl text-lg font-black uppercase tracking-widest shadow-xl shadow-destructive/25 transition-all" disabled={loading}>
-            {loading ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : <KeyRound className="w-6 h-6 mr-2" />}
-            Authenticate Admin
-          </Button>
-        </form>
+          {error && (
+            <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs font-bold uppercase tracking-wider">
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <div className="pt-6 text-center border-t space-y-6">
-          <button 
-            onClick={() => router.push('/user/login')}
-            className="text-sm font-black text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
-          >
-            Return to <span className="text-primary underline underline-offset-4 ml-1">Agent Portal</span>
-          </button>
-        </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Admin Email</Label>
+                <div className="relative">
+                  <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    type="email" 
+                    placeholder="Enter username" 
+                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-medium"
+                    required 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Access Key</Label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    type="password" 
+                    placeholder="••••••••"
+                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-medium"
+                    required 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-xl text-base font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all" disabled={loading}>
+              {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <KeyRound className="w-5 h-5 mr-2" />}
+              Sign In
+            </Button>
+          </form>
+
+          <div className="pt-4 text-center border-t space-y-4">
+            <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.3em]">SECURE SESSION GATEWAY</p>
+          </div>
+        </CardContent>
       </Card>
     </div>
   )

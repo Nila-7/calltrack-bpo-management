@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ShieldCheck, Lock, Loader2, KeyRound, User as UserIcon, MessageSquare } from "lucide-react"
+import { PhoneCall, Lock, Loader2, KeyRound, User as UserIcon, ShieldCheck } from "lucide-react"
 import { useAuth, useUser } from "@/firebase"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 export default function UserLoginPage() {
   const router = useRouter()
@@ -40,16 +41,14 @@ export default function UserLoginPage() {
       
       toast({
         title: "Access Authorized",
-        description: `Identity verified. Synchronizing dashboard...`,
+        description: `Welcome back. Redirecting to workspace...`,
       })
     } catch (error: any) {
       console.error("USER_AUTH_ERROR:", error)
       toast({
         variant: "destructive",
         title: "Authentication Failed",
-        description: error.code === 'auth/wrong-password' 
-          ? "Incorrect password. Please try again." 
-          : "Invalid credentials. Ensure your account is registered.",
+        description: "Invalid credentials. Please verify your email and password.",
       })
     } finally {
       setLoading(false)
@@ -65,71 +64,94 @@ export default function UserLoginPage() {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden bg-background">
-      <Card className="w-full max-w-[500px] shadow-2xl border bg-card p-10 space-y-8 transition-all">
-        <div className="text-center space-y-3">
-          <div className="flex justify-center">
-            <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20">
-              <ShieldCheck className="w-14 h-14 text-primary" />
-            </div>
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-foreground uppercase">CallTrack BPO</h1>
-          <p className="text-muted-foreground text-sm font-medium tracking-wide uppercase">Enterprise Management System</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Agent Username</Label>
-              <div className="relative">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input 
-                  type="email" 
-                  placeholder="Enter username" 
-                  className="pl-12 h-14 bg-muted/20 border-border rounded-xl focus-visible:ring-primary font-medium"
-                  required 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">Security Access Code</Label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input 
-                  type="password" 
-                  placeholder="••••••••"
-                  className="pl-12 h-14 bg-muted/20 border-border rounded-xl focus-visible:ring-primary font-medium"
-                  required 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <Button type="submit" className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-lg font-black uppercase tracking-widest shadow-xl shadow-blue-500/25 transition-all" disabled={loading}>
-            {loading ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : <KeyRound className="w-6 h-6 mr-2" />}
-            Sign In to Terminal
-          </Button>
-        </form>
-
-        <div className="pt-6 text-center border-t space-y-6">
-          <button 
-            onClick={() => router.push('/user/signup')}
-            className="text-sm font-black text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest"
-          >
-            Need an account? <span className="text-primary underline underline-offset-4 ml-1">Create Agent ID</span>
-          </button>
-        </div>
-      </Card>
-
-      <div className="fixed bottom-8 right-8 z-50">
-        <button className="p-4 bg-primary text-primary-foreground rounded-full shadow-2xl shadow-primary/40 hover:scale-110 transition-transform">
-          <MessageSquare className="w-6 h-6" />
-        </button>
+    <div className="min-h-screen flex items-center justify-center p-6 relative bg-background">
+      <div className="absolute top-8 right-8 z-50">
+        <ThemeToggle />
       </div>
+
+      <Card className="w-full max-w-[500px] shadow-2xl border-none bg-card p-0 overflow-hidden rounded-[2rem]">
+        <div className="p-8 pb-0 text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="p-4 bg-primary/10 rounded-2xl">
+              <PhoneCall className="w-10 h-10 text-primary" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-4xl font-black tracking-tight text-foreground">CallTrack</h1>
+            <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest">Smart BPO Call Management System</p>
+          </div>
+        </div>
+
+        <CardContent className="p-8 pt-6 space-y-8">
+          {/* Portal Toggle */}
+          <div className="grid grid-cols-2 p-1 bg-muted rounded-xl gap-1">
+            <Button 
+              variant="default" 
+              className="rounded-lg font-bold text-xs shadow-sm h-10"
+              onClick={() => router.push('/user/login')}
+            >
+              <UserIcon className="w-3.5 h-3.5 mr-2" />
+              User Portal
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="rounded-lg font-bold text-xs text-muted-foreground hover:text-foreground h-10"
+              onClick={() => router.push('/admin/login')}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 mr-2" />
+              Admin Console
+            </Button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Username / Email</Label>
+                <div className="relative">
+                  <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    type="email" 
+                    placeholder="Enter username" 
+                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-medium"
+                    required 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    type="password" 
+                    placeholder="••••••••"
+                    className="pl-12 h-12 bg-muted/30 border-none rounded-xl focus-visible:ring-primary font-medium"
+                    required 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-xl text-base font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all" disabled={loading}>
+              {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <KeyRound className="w-5 h-5 mr-2" />}
+              Sign In
+            </Button>
+          </form>
+
+          <div className="pt-4 text-center border-t space-y-4">
+            <button 
+              onClick={() => router.push('/user/signup')}
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              Need an account? <span className="text-primary font-bold">Sign Up Now</span>
+            </button>
+            <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.3em]">SECURE SESSION GATEWAY</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
