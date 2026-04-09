@@ -40,8 +40,9 @@ export default function UserDashboard() {
     if (!isUserLoading && !user) router.push('/')
   }, [user, isUserLoading, router])
 
+  // Gate query to ensure user.uid is available before querying
   const callsQuery = useMemoFirebase(() => {
-    if (!user) return null
+    if (!user || !user.uid) return null
     return query(
       collection(db, 'calls'),
       where('userId', '==', user.uid),
@@ -84,14 +85,14 @@ export default function UserDashboard() {
     }
   }
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 font-body">
       <nav className="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
         <div className="flex items-center space-x-3">
           <PhoneCall className="text-primary w-6 h-6" />
-          <span className="font-bold text-xl text-slate-900">BPO Agent Portal</span>
+          <span className="font-bold text-xl text-slate-900 tracking-tight">BPO Agent Portal</span>
         </div>
         <div className="flex items-center space-x-4">
           <Badge variant="secondary" className="px-3 py-1 font-mono text-xs flex items-center">
@@ -140,7 +141,7 @@ export default function UserDashboard() {
                     onChange={(e) => setIssue(e.target.value)}
                   />
                 </div>
-                <Button className="w-full bg-primary hover:bg-primary/90" disabled={submitting}>
+                <Button className="w-full bg-primary hover:bg-primary/90 transition-colors" disabled={submitting}>
                   {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
                   Submit Record
                 </Button>
@@ -157,7 +158,7 @@ export default function UserDashboard() {
           
           <div className="space-y-3">
             {callsLoading ? (
-              <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>
+              <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>
             ) : calls?.map((call) => (
               <Card key={call.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-5 flex justify-between items-start">

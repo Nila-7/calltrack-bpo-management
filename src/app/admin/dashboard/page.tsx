@@ -28,13 +28,14 @@ export default function AdminDashboard() {
   const { user, isUserLoading } = useUser()
   const { toast } = useToast()
 
-  // Fetch profile to verify admin role more robustly
+  // Fetch profile to verify admin role
   const profileRef = useMemoFirebase(() => {
     if (!user) return null;
     return doc(db, 'userProfiles', user.uid);
   }, [db, user]);
   const { data: profile, isLoading: profileLoading } = useDoc(profileRef);
 
+  // Robust admin check
   const isAdmin = user?.email === 'admin@gmail.com' || profile?.role === 'Admin';
 
   useEffect(() => {
@@ -45,11 +46,11 @@ export default function AdminDashboard() {
     }
   }, [user, isUserLoading, profileLoading, isAdmin, router])
 
-  // Gate the query so it only runs if the user is authorized
+  // Gate the query so it ONLY runs if the user is authorized AND data is ready
   const allCallsQuery = useMemoFirebase(() => {
-    if (!user || !isAdmin) return null;
+    if (!user || !isAdmin || isUserLoading || profileLoading) return null;
     return query(collection(db, 'calls'), orderBy('createdAt', 'desc'), limit(100));
-  }, [db, user, isAdmin])
+  }, [db, user, isAdmin, isUserLoading, profileLoading])
 
   const { data: calls, isLoading: callsLoading } = useCollection(allCallsQuery)
 
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
       await updateDoc(doc(db, 'calls', id), { status })
       toast({ title: "Status Updated", description: `Call is now ${status}.` })
     } catch (err: any) {
-      // Errors are handled by the global listener, but we can catch for local UI feedback
+      // Errors are handled by the global listener
     }
   }
 
@@ -71,12 +72,21 @@ export default function AdminDashboard() {
     }
   }
 
-  if (isUserLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+  if (isUserLoading || profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center space-y-4">
+          <Loader2 className="animate-spin text-primary w-10 h-10 mx-auto" />
+          <p className="text-slate-500 font-medium">Verifying Administrator Access...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 font-body">
       <nav className="bg-primary px-8 py-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
         <div className="flex items-center space-x-3 text-white">
           <PhoneCall className="w-6 h-6" />
